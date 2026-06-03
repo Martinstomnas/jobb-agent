@@ -15,7 +15,7 @@ function Collapsible({ label, count, children }) {
   );
 }
 
-export default function Output({ content, running, matchOutput, kontrollOutput, sources, interviewPrep }) {
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep }) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -53,21 +53,16 @@ export default function Output({ content, running, matchOutput, kontrollOutput, 
         </button>
       </div>
 
+      {vinklingOutput && (
+        <div className="vinkling-callout">
+          <span className="vinkling-label">Anbefalt vinkling</span>
+          <p>{vinklingOutput}</p>
+        </div>
+      )}
+
       <div className="output-content">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
-
-      {kontrollOutput && (
-        <Collapsible label="Validering">
-          <ReactMarkdown>{kontrollOutput}</ReactMarkdown>
-        </Collapsible>
-      )}
-
-      {matchOutput && (
-        <Collapsible label="Match-analyse">
-          <ReactMarkdown>{matchOutput}</ReactMarkdown>
-        </Collapsible>
-      )}
 
       {interviewPrep && (
         <Collapsible label="Intervjuforberedelse">

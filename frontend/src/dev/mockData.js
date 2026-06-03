@@ -28,38 +28,8 @@ Nevn noe spesifikt fra Sopra Sterias profil — konsulentmodellen eller kundepor
 
 Ikke list teknologier uten kontekst. Unngå "løsningsorientert" og "strukturert". Ikke overskrid 350 ord.`;
 
-export const mockMatchOutput = `## Sterke matcher
+export const mockMatchOutput = `Fremstill deg som en raskt lærende med bevist brukerstøtteerfaring som mangler formell sertifisering — ikke som en junior uten erfaring.`;
 
-- Brukerstøtteerfaring fra Kartverket treffer kjernen i stillingen direkte
-- Kundeservicebakgrunn fra Delta og Europris viser evne til å håndtere ikke-tekniske brukere
-- Bachelor i IT gir teknisk fundament
-
-## Gap
-
-- Ingen formell IT-support-sertifisering (CompTIA A+, ITIL)
-- Begrenset erfaring med enterprise-ticketsystemer
-
-## Anbefalt posisjonering
-
-Fremstill deg som en raskt lærende med bevist brukerstøtteerfaring som mangler formell sertifisering — ikke som en junior uten erfaring.`;
-
-export const mockKontrollOutput = `## Vurdering av disposisjonen
-
-**Åpning — Kartverket brukerstøtte** **[OK]**
-Direkte dokumentert i CV. Trygt å bruke som åpning.
-
-**Teknisk brukerstøtte og feilsøking** **[OK]**
-Støttet av Kartverket-perioden. Vær spesifikk på type henvendelser.
-
-**Serviceinnstilling — Delta og Europris** **[Utdyp]**
-Erfaringen er reell, men koblingen til IT-kontekst må kandidaten selv formulere konkret.
-
-**ITIL/CompTIA A+ gap** **[Sjekk]**
-Hvis kandidaten ikke har en konkret sertifiseringsplan, bør denne delen modereres.
-
-## Oppsummering
-
-Kandidaten har et solid grunnlag for åpning og kjernepunkter. Sertifiseringsgapet er det eneste stedet som krever ekstra omtanke — vær ærlig, men ha en plan klar.`;
 
 export const mockInterviewPrep = `## Konkret intervjuforberedelse
 

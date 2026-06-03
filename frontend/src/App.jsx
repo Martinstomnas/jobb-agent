@@ -8,7 +8,7 @@ import "./App.css";
 import * as mockData from "./dev/mockData.js";
 
 // Sett til true for å vise dummy-data uten å kjøre backend
-const DEV = false;
+const DEV = true;
 
 const AGENTS = [
   "Kravleser",
@@ -17,17 +17,13 @@ const AGENTS = [
   "GapDetector",
   "Writer",
   "InterviewPrep",
-  "Kontroll",
 ];
 
 export default function App() {
   const [agentStates, setAgentStates] = useState({});
   const [output, setOutput] = useState(DEV ? mockData.mockOutput : null);
-  const [matchOutput, setMatchOutput] = useState(
+  const [vinklingOutput, setVinklingOutput] = useState(
     DEV ? mockData.mockMatchOutput : null,
-  );
-  const [kontrollOutput, setKontrollOutput] = useState(
-    DEV ? mockData.mockKontrollOutput : null,
   );
   const [running, setRunning] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState(null);
@@ -110,16 +106,13 @@ export default function App() {
             setResearchSources(msg.sources);
           }
           if (msg.agent === "Match" && msg.status === "done") {
-            setMatchOutput(msg.content);
+            setVinklingOutput(msg.content);
           }
           if (msg.agent === "Writer" && msg.status === "done") {
             setOutput(msg.content);
           }
           if (msg.agent === "InterviewPrep" && msg.status === "done") {
             setInterviewPrep(msg.content);
-          }
-          if (msg.agent === "Kontroll" && msg.status === "done") {
-            setKontrollOutput(msg.content);
           }
         } catch {
           // ufullstendig chunk, ignorer
@@ -160,8 +153,7 @@ export default function App() {
           <Output
             content={output}
             running={running}
-            matchOutput={matchOutput}
-            kontrollOutput={kontrollOutput}
+            vinklingOutput={vinklingOutput}
             sources={researchSources}
             interviewPrep={interviewPrep}
           />

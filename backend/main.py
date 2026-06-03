@@ -20,7 +20,6 @@ from agents.match import match
 from agents.gap_detector import gap_detector
 from agents.writer import writer
 from agents.interview_prep import interview_prep
-from agents.kontroll import kontroll
 
 app = FastAPI()
 
@@ -136,7 +135,9 @@ async def analyze(input: JobInput):
             # Match
             yield event("Match", "running")
             match_result = await match(krav_result, research_text, input.cv)
-            yield event("Match", "done", match_result)
+            _vm = re.search(r'## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)', match_result, re.DOTALL)
+            vinkling = _vm.group(1).strip() if _vm else ""
+            yield event("Match", "done", vinkling)
 
             # Gap-detektor: still 0–3 oppfølgingsspørsmål hvis nødvendig
             questions = await gap_detector(research_text, input.cv)
@@ -163,11 +164,6 @@ async def analyze(input: JobInput):
 
             yield event("Writer", "done", writer_result)
             yield event("InterviewPrep", "done", interview_result)
-
-            # Kontroll (kun brevet)
-            yield event("Kontroll", "running")
-            final = await kontroll(writer_result, research_text)
-            yield event("Kontroll", "done", final)
 
             yield event("FERDIG", "done")
         finally:
