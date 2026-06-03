@@ -56,11 +56,7 @@ export const mockResearchSources = [
   },
 ];
 
-export const mockInterviewPrep = `## Konkret intervjuforberedelse
-
-### Sannsynlige intervjuspørsmål
-
-**Sp 1: "Du har bachelor i IT, men ingen formell IT-support-sertifisering. Hvordan kompenserer du?"**
+export const mockInterviewPrep = `**Sp 1: "Du har bachelor i IT, men ingen formell IT-support-sertifisering. Hvordan kompenserer du?"**
 
 Svar-strategi: Ikke defensiv. Anerkjenn gapet, vis bevissthet og konkret plan.
 

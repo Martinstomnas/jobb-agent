@@ -39,8 +39,6 @@ Match-analyse (styrker og gap):
 
 Lever to seksjoner:
 
-## Sannsynlige intervjuspørsmål
-
 Velg 4-5 spørsmål som denne kandidaten sannsynligvis vil få, basert på kravene og gapene i match-analysen.
 For hvert spørsmål:
 **Sp: [Spørsmålet]**
