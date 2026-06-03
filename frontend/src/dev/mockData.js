@@ -31,6 +31,31 @@ Ikke list teknologier uten kontekst. Unngå "løsningsorientert" og "strukturert
 export const mockMatchOutput = `Fremstill deg som en raskt lærende med bevist brukerstøtteerfaring som mangler formell sertifisering — ikke som en junior uten erfaring.`;
 
 
+export const mockResearchSources = [
+  {
+    query: "Sopra Steria Norge IT-konsulent kultur verdier",
+    results: [
+      { title: "Om oss – Sopra Steria", url: "https://www.soprasteria.no/om-oss" },
+      { title: "Jobbe hos oss – Sopra Steria", url: "https://www.soprasteria.no/karriere" },
+      { title: "Sopra Steria årsrapport 2023", url: "https://www.soprasteria.no/investorer/arsrapport" },
+    ],
+  },
+  {
+    query: "Sopra Steria IT support helpdesk stilling krav",
+    results: [
+      { title: "Ledige stillinger – Sopra Steria", url: "https://www.soprasteria.no/karriere/ledige-stillinger" },
+      { title: "IT Support Technician – Finn.no", url: "https://www.finn.no/job/fulltime/ad.html?finnkode=123456" },
+    ],
+  },
+  {
+    query: "ITIL CompTIA A+ sertifisering krav IT-support Norge",
+    results: [
+      { title: "CompTIA A+ sertifisering – CompTIA", url: "https://www.comptia.org/certifications/a" },
+      { title: "ITIL Foundation – Axelos", url: "https://www.axelos.com/certifications/itil-service-management" },
+    ],
+  },
+];
+
 export const mockInterviewPrep = `## Konkret intervjuforberedelse
 
 ### Sannsynlige intervjuspørsmål

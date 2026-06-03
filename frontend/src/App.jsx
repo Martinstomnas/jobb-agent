@@ -27,7 +27,7 @@ export default function App() {
   );
   const [running, setRunning] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState(null);
-  const [researchSources, setResearchSources] = useState(null);
+  const [researchSources, setResearchSources] = useState(DEV ? mockData.mockResearchSources : null);
   const [interviewPrep, setInterviewPrep] = useState(
     DEV ? mockData.mockInterviewPrep : null,
   );

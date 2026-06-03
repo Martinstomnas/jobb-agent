@@ -135,7 +135,9 @@ async def analyze(input: JobInput):
             # Match
             yield event("Match", "running")
             match_result = await match(krav_result, research_text, input.cv)
-            _vm = re.search(r'## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)', match_result, re.DOTALL)
+            _vm = re.search(
+                r"## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL
+            )
             vinkling = _vm.group(1).strip() if _vm else ""
             yield event("Match", "done", vinkling)
 
@@ -158,8 +160,18 @@ async def analyze(input: JobInput):
             yield event("InterviewPrep", "running")
 
             writer_result, interview_result = await asyncio.gather(
-                writer(krav_result, research_text, match_result, extra_context=extra_context),
-                interview_prep(krav_result, research_text, match_result, extra_context=extra_context),
+                writer(
+                    krav_result,
+                    research_text,
+                    match_result,
+                    extra_context=extra_context,
+                ),
+                interview_prep(
+                    krav_result,
+                    research_text,
+                    match_result,
+                    extra_context=extra_context,
+                ),
             )
 
             yield event("Writer", "done", writer_result)
