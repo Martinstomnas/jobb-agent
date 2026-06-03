@@ -215,7 +215,7 @@ async def analyze(input: JobInput):
             for _ in range(critic_rounds):
                 active.add("Critic")
                 yield event("Critic", "running")
-                critique = await critic(writer_result, krav_result, match_result)
+                critique = await critic(writer_result, krav_result, match_result, input.cv)
                 writer_result = await writer_revise(writer_result, critique)
                 active.discard("Critic")
                 yield event("Critic", "done")
