@@ -91,12 +91,22 @@ def event(agent: str, status: str, content: str = "", **extra):
     return {"data": json.dumps(payload)}
 
 
+_MAX_PDF_BYTES = 5_000_000  # 5 MB
+
+
 @app.post("/extract-pdf")
 async def extract_pdf(file: UploadFile = File(...)):
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Kun PDF-filer støttes")
     data = await file.read()
-    doc = fitz.open(stream=data, filetype="pdf")
+    if not data:
+        raise HTTPException(status_code=400, detail="Tom fil")
+    if len(data) > _MAX_PDF_BYTES:
+        raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
+    try:
+        doc = fitz.open(stream=data, filetype="pdf")
+    except Exception:
+        raise HTTPException(status_code=422, detail="Kunne ikke lese PDF-filen")
     pages = []
     for page in doc:
         raw = page.get_text("text", sort=True)
