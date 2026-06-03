@@ -20,6 +20,7 @@ from agents.match import match
 from agents.gap_detector import gap_detector
 from agents.writer import writer, writer_revise
 from agents.critic import critic
+from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
 from agents.refiner import refiner
 
@@ -148,19 +149,37 @@ async def analyze(input: JobInput):
             vinkling = _vm.group(1).strip() if _vm else ""
             yield event("Match", "done", vinkling)
 
-            # Gap-detektor: still 0–3 oppfølgingsspørsmål hvis nødvendig
-            questions = await gap_detector(research_text, input.cv)
-            collected_answers = []
-            for question in questions:
-                yield event("GapDetector", "question", question, session_id=session_id)
+            # Orchestrator: bestem pipeline-strategi
+            yield event("Orchestrator", "running")
+            plan = await orchestrator(krav_result, match_result)
+            yield event("Orchestrator", "done", plan.get("fit_summary", ""))
+
+            # Advar brukeren ved svak match og vent på bekreftelse
+            if plan.get("fit_level") == "weak":
+                yield event("Orchestrator", "warning", plan.get("fit_summary", ""), session_id=session_id)
                 try:
-                    answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
-                    yield event("GapDetector", "answered", answer)
-                    if answer.strip():
-                        collected_answers.append(answer)
+                    confirmation = await asyncio.wait_for(answer_queue.get(), timeout=300)
+                    if confirmation.strip().lower() == "avbryt":
+                        yield event("FERDIG", "done")
+                        return
                 except asyncio.TimeoutError:
-                    yield event("GapDetector", "answered", "")
-            extra_context = "\n".join(collected_answers)
+                    pass
+
+            # Gap-detektor: hopp over ved sterk match
+            extra_context = ""
+            if not plan.get("skip_gap_detector"):
+                questions = await gap_detector(research_text, input.cv)
+                collected_answers = []
+                for question in questions:
+                    yield event("GapDetector", "question", question, session_id=session_id)
+                    try:
+                        answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
+                        yield event("GapDetector", "answered", answer)
+                        if answer.strip():
+                            collected_answers.append(answer)
+                    except asyncio.TimeoutError:
+                        yield event("GapDetector", "answered", "")
+                extra_context = "\n".join(collected_answers)
 
             # Writer + InterviewPrep parallelt
             yield event("Writer", "running")
@@ -183,10 +202,14 @@ async def analyze(input: JobInput):
 
             yield event("InterviewPrep", "done", interview_result)
 
-            yield event("Critic", "running")
-            critique = await critic(writer_draft, krav_result, match_result)
-            writer_result = await writer_revise(writer_draft, critique)
-            yield event("Critic", "done")
+            # Critic: antall runder bestemt av orchestrator
+            critic_rounds = plan.get("critic_rounds", 1)
+            writer_result = writer_draft
+            for _ in range(critic_rounds):
+                yield event("Critic", "running")
+                critique = await critic(writer_result, krav_result, match_result)
+                writer_result = await writer_revise(writer_result, critique)
+                yield event("Critic", "done")
 
             yield event("Writer", "done", writer_result)
 

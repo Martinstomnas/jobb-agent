@@ -3,6 +3,7 @@ import InputForm from "./components/InputForm";
 import AgentPipeline from "./components/AgentPipeline";
 import Output from "./components/Output";
 import FollowUpQuestion from "./components/FollowUpQuestion";
+import FitWarning from "./components/FitWarning";
 import "./App.css";
 
 import * as mockData from "./dev/mockData.js";
@@ -14,6 +15,7 @@ const AGENTS = [
   "Kravleser",
   "Research",
   "Match",
+  "Orchestrator",
   "GapDetector",
   "Writer",
   "InterviewPrep",
@@ -29,6 +31,7 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [refining, setRefining] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState(null);
+  const [fitWarning, setFitWarning] = useState(null);
   const [researchSources, setResearchSources] = useState(DEV ? mockData.mockResearchSources : null);
   const [interviewPrep, setInterviewPrep] = useState(
     DEV ? mockData.mockInterviewPrep : null,
@@ -74,6 +77,7 @@ export default function App() {
     setRunning(true);
     setAgentStates({});
     setPendingQuestion(null);
+    setFitWarning(null);
 
     const res = await fetch("http://localhost:8000/analyze", {
       method: "POST",
@@ -104,6 +108,23 @@ export default function App() {
           if (msg.agent === "FERDIG") {
             setRunning(false);
             continue;
+          }
+
+          if (msg.agent === "Orchestrator" && msg.status === "warning") {
+            setFitWarning({
+              summary: msg.content,
+              sessionId: msg.session_id,
+              key: Date.now(),
+            });
+            setAgentStates((prev) => ({
+              ...prev,
+              Orchestrator: { status: "warning", content: msg.content },
+            }));
+            continue;
+          }
+
+          if (msg.agent === "Orchestrator" && msg.status === "done") {
+            setFitWarning(null);
           }
 
           if (msg.agent === "GapDetector" && msg.status === "question") {
@@ -172,6 +193,13 @@ export default function App() {
       <main className="app-main">
         <div className="left-col">
           <InputForm onSubmit={handleSubmit} running={running} />
+          {fitWarning && (
+            <FitWarning
+              key={fitWarning.key}
+              summary={fitWarning.summary}
+              sessionId={fitWarning.sessionId}
+            />
+          )}
           {pendingQuestion && (
             <FollowUpQuestion
               key={pendingQuestion.key}
