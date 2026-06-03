@@ -170,5 +170,3 @@ export default function App() {
     </div>
   );
 }
-
-<h1> HEIs</h1>;
