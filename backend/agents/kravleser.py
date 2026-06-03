@@ -35,4 +35,5 @@ Svar strukturert:
 ## Nøkkelord å speile i søknaden
 - (3-5 ord/fraser fra annonsen som bør gjentas i søknaden)
 """
-    return await llm(SYSTEM, prompt)
+    # Ekstraksjon av krav skal være stabil og reproduserbar -> lav temperatur.
+    return await llm(SYSTEM, prompt, temperature=0)

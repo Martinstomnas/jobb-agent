@@ -31,7 +31,8 @@ Eksempel: "Jeg fant at de jobber mye med energisektoren – har du noen erfaring
 INGEN hvis ingen reelle gap.
 
 Svar nå:"""
-    result = await llm(SYSTEM, prompt, max_tokens=250)
+    # Gap-deteksjon er en analytisk vurdering -> lav temperatur for stabilitet.
+    result = await llm(SYSTEM, prompt, max_tokens=250, temperature=0)
     lines = result.strip().splitlines()
     questions = []
     for line in lines:

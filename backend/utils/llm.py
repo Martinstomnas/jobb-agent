@@ -43,11 +43,14 @@ async def api_errors():
         raise RuntimeError(f"API-feil ({e.status_code})")
 
 
-async def llm(system: str, user: str, max_tokens: int = 1500) -> str:
+async def llm(
+    system: str, user: str, max_tokens: int = 1500, temperature: float = 1.0
+) -> str:
     async with api_errors():
         response = await client.messages.create(
             model=MODEL,
             max_tokens=max_tokens,
+            temperature=temperature,
             system=system,
             messages=[{"role": "user", "content": user}],
         )
@@ -59,17 +62,23 @@ async def llm(system: str, user: str, max_tokens: int = 1500) -> str:
 
 
 async def llm_tool(
-    system: str, user: str, tool: dict, max_tokens: int = 500
+    system: str,
+    user: str,
+    tool: dict,
+    max_tokens: int = 500,
+    temperature: float = 0.0,
 ) -> dict | None:
     """
     Kaller modellen med tvunget tool-bruk og returnerer tool-inputen som dict.
     Returnerer None hvis modellen ikke produserte et tool_use-kall.
     Erstatter skjør JSON-parsing: skjemaet i `tool` validerer strukturen.
+    Standard temperatur er 0 — strukturert beslutningsoutput skal være stabil.
     """
     async with api_errors():
         response = await client.messages.create(
             model=MODEL,
             max_tokens=max_tokens,
+            temperature=temperature,
             system=system,
             tools=[tool],
             tool_choice={"type": "tool", "name": tool["name"]},
