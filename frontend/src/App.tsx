@@ -9,7 +9,7 @@ import "./App.css";
 import * as mockData from "./dev/mockData";
 import type { AgentStates, ResearchSource } from "./types";
 
-const DEV = false;
+const DEV = true;
 
 const AGENTS = [
   "Kravleser",
@@ -36,21 +36,30 @@ interface FitWarningState {
 
 export default function App() {
   const [agentStates, setAgentStates] = useState<AgentStates>({});
-  const [output, setOutput] = useState<string | null>(DEV ? mockData.mockOutput : null);
+  const [output, setOutput] = useState<string | null>(
+    DEV ? mockData.mockOutput : null,
+  );
   const [vinklingOutput, setVinklingOutput] = useState<string | null>(
     DEV ? mockData.mockMatchOutput : null,
   );
   const [running, setRunning] = useState(false);
-  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
+  const [pendingQuestion, setPendingQuestion] =
+    useState<PendingQuestion | null>(null);
   const [fitWarning, setFitWarning] = useState<FitWarningState | null>(null);
-  const [researchSources, setResearchSources] = useState<ResearchSource[] | null>(
-    DEV ? mockData.mockResearchSources : null,
-  );
+  const [researchSources, setResearchSources] = useState<
+    ResearchSource[] | null
+  >(DEV ? mockData.mockResearchSources : null);
   const [interviewPrep, setInterviewPrep] = useState<string | null>(
     DEV ? mockData.mockInterviewPrep : null,
   );
 
-  const handleSubmit = async ({ jobPosting, cv }: { jobPosting: string; cv: string }) => {
+  const handleSubmit = async ({
+    jobPosting,
+    cv,
+  }: {
+    jobPosting: string;
+    cv: string;
+  }) => {
     setRunning(true);
     setAgentStates({});
     setPendingQuestion(null);
@@ -134,7 +143,11 @@ export default function App() {
             [msg.agent]: { status: msg.status, content: msg.content },
           }));
 
-          if (msg.agent === "Research" && msg.status === "done" && msg.sources) {
+          if (
+            msg.agent === "Research" &&
+            msg.status === "done" &&
+            msg.sources
+          ) {
             setResearchSources(msg.sources);
           }
           if (msg.agent === "Match" && msg.status === "done") {
