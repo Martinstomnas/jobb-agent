@@ -20,6 +20,7 @@ from agents.match import match
 from agents.gap_detector import gap_detector
 from agents.writer import writer
 from agents.interview_prep import interview_prep
+from agents.refiner import refiner
 
 app = FastAPI()
 
@@ -61,6 +62,11 @@ class JobInput(BaseModel):
 
 class AnswerInput(BaseModel):
     answer: str
+
+
+class RefineInput(BaseModel):
+    disposition: str
+    instruction: str
 
 
 @app.on_event("startup")
@@ -181,5 +187,16 @@ async def analyze(input: JobInput):
         finally:
             _answer_queues.pop(session_id, None)
             _session_created.pop(session_id, None)
+
+    return EventSourceResponse(stream())
+
+
+@app.post("/refine")
+async def refine(input: RefineInput):
+    async def stream():
+        yield event("Refiner", "running")
+        result = await refiner(input.disposition, input.instruction)
+        yield event("Refiner", "done", result)
+        yield event("FERDIG", "done")
 
     return EventSourceResponse(stream())
