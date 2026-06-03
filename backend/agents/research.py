@@ -3,15 +3,7 @@ Agent 2: Research
 Søker aktivt på nett etter informasjon om selskapet.
 """
 
-import os
-import anthropic
-from dotenv import load_dotenv
-
-from utils.llm import MODEL
-
-load_dotenv()
-
-client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+from utils.llm import MODEL, api_errors, client
 
 
 async def research(job_posting: str) -> tuple[str, list[dict]]:
@@ -19,7 +11,7 @@ async def research(job_posting: str) -> tuple[str, list[dict]]:
     Returnerer (tekst, søkelogg) der søkelogg er en liste av
     {"query": str, "results": [{"title": str, "url": str}]}.
     """
-    try:
+    async with api_errors():
         response = await client.messages.create(
             model=MODEL,
             max_tokens=2000,
@@ -53,14 +45,6 @@ Lever en strukturert oppsummering:
                 }
             ],
         )
-    except anthropic.RateLimitError:
-        raise RuntimeError("Rate limit nådd — prøv igjen om litt")
-    except anthropic.APIConnectionError:
-        raise RuntimeError("Kunne ikke koble til Anthropic API")
-    except anthropic.AuthenticationError:
-        raise RuntimeError("Ugyldig API-nøkkel")
-    except anthropic.APIStatusError as e:
-        raise RuntimeError(f"API-feil ({e.status_code})")
 
     sources: list[dict] = []
 
