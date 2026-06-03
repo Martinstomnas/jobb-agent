@@ -122,8 +122,11 @@ async def analyze(input: JobInput):
     _session_created[session_id] = time.time()
 
     async def stream():
+        active: set[str] = set()
+
         try:
             # Kravleser + Research parallelt
+            active.update({"Kravleser", "Research"})
             yield event("Kravleser", "running")
             yield event("Research", "running")
 
@@ -132,12 +135,15 @@ async def analyze(input: JobInput):
                 research(input.job_posting),
             )
 
+            active.difference_update({"Kravleser", "Research"})
             yield event("Kravleser", "done", krav_result)
             yield event("Research", "done", research_text, sources=research_sources)
 
             # Match
+            active.add("Match")
             yield event("Match", "running")
             match_result = await match(krav_result, research_text, input.cv)
+            active.discard("Match")
             _vm = re.search(
                 r"## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL
             )
@@ -145,8 +151,10 @@ async def analyze(input: JobInput):
             yield event("Match", "done", vinkling)
 
             # Orchestrator: bestem pipeline-strategi
+            active.add("Orchestrator")
             yield event("Orchestrator", "running")
             plan = await orchestrator(krav_result, match_result)
+            active.discard("Orchestrator")
             yield event("Orchestrator", "done", plan.get("fit_summary", ""))
 
             # Advar brukeren ved svak match og vent på bekreftelse
@@ -163,6 +171,7 @@ async def analyze(input: JobInput):
             # Gap-detektor: hopp over ved sterk match
             extra_context = ""
             if not plan.get("skip_gap_detector"):
+                active.add("GapDetector")
                 questions = await gap_detector(research_text, input.cv)
                 collected_answers = []
                 for question in questions:
@@ -174,9 +183,11 @@ async def analyze(input: JobInput):
                             collected_answers.append(answer)
                     except asyncio.TimeoutError:
                         yield event("GapDetector", "answered", "")
+                active.discard("GapDetector")
                 extra_context = "\n".join(collected_answers)
 
             # Writer + InterviewPrep parallelt
+            active.update({"Writer", "InterviewPrep"})
             yield event("Writer", "running")
             yield event("InterviewPrep", "running")
 
@@ -195,19 +206,27 @@ async def analyze(input: JobInput):
                 ),
             )
 
+            active.difference_update({"Writer", "InterviewPrep"})
             yield event("InterviewPrep", "done", interview_result)
 
             # Critic: antall runder bestemt av orchestrator
             critic_rounds = plan.get("critic_rounds", 1)
             writer_result = writer_draft
             for _ in range(critic_rounds):
+                active.add("Critic")
                 yield event("Critic", "running")
                 critique = await critic(writer_result, krav_result, match_result)
                 writer_result = await writer_revise(writer_result, critique)
+                active.discard("Critic")
                 yield event("Critic", "done")
 
             yield event("Writer", "done", writer_result)
+            yield event("FERDIG", "done")
 
+        except Exception as e:
+            err_msg = str(e) or "Ukjent feil"
+            for agent in list(active):
+                yield event(agent, "error", err_msg)
             yield event("FERDIG", "done")
         finally:
             _answer_queues.pop(session_id, None)

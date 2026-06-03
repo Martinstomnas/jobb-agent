@@ -1,4 +1,4 @@
-export type AgentStatus = "idle" | "running" | "done" | "question" | "warning";
+export type AgentStatus = "idle" | "running" | "done" | "question" | "warning" | "error";
 
 export interface AgentState {
   status: AgentStatus;

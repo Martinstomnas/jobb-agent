@@ -89,10 +89,10 @@ CV kan limes inn som tekst eller lastes opp som PDF (tekst-basert PDF — ikke s
 
 ## Tech-stack
 
-| Del      | Teknologi                              |
-|----------|----------------------------------------|
-| Backend  | Python, FastAPI, Anthropic Claude API  |
-| Frontend | React 19, Vite                         |
-| Streaming| Server-Sent Events (SSE)               |
-| PDF      | PyMuPDF                                |
-| LLM      | Claude Haiku 4.5                       |
+| Del      | Teknologi                                     |
+|----------|-----------------------------------------------|
+| Backend  | Python, FastAPI, Anthropic Claude API         |
+| Frontend | React 19, TypeScript, Vite                    |
+| Streaming| Server-Sent Events (SSE)                      |
+| PDF      | PyMuPDF                                       |
+| LLM      | Claude Haiku 4.5                              |

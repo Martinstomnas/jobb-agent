@@ -40,6 +40,7 @@ export default function AgentPipeline({ agents, states, running: _running }: Age
                 {status === "done" && <span className="checkmark">ok</span>}
                 {status === "question" && <span className="pulse" style={{ background: "var(--accent2)" }} />}
                 {status === "warning" && <span className="pulse" style={{ background: "var(--running)" }} />}
+                {status === "error" && <span className="error-mark">!</span>}
                 {status === "idle" && <span className="idle-dot" />}
               </div>
               {i < agents.length - 1 && (
