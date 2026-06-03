@@ -17,6 +17,7 @@ const AGENTS = [
   "GapDetector",
   "Writer",
   "InterviewPrep",
+  "Critic",
 ];
 
 export default function App() {

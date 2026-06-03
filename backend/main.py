@@ -18,7 +18,8 @@ from agents.kravleser import kravleser
 from agents.research import research
 from agents.match import match
 from agents.gap_detector import gap_detector
-from agents.writer import writer
+from agents.writer import writer, writer_revise
+from agents.critic import critic
 from agents.interview_prep import interview_prep
 from agents.refiner import refiner
 
@@ -165,7 +166,7 @@ async def analyze(input: JobInput):
             yield event("Writer", "running")
             yield event("InterviewPrep", "running")
 
-            writer_result, interview_result = await asyncio.gather(
+            writer_draft, interview_result = await asyncio.gather(
                 writer(
                     krav_result,
                     research_text,
@@ -180,8 +181,14 @@ async def analyze(input: JobInput):
                 ),
             )
 
-            yield event("Writer", "done", writer_result)
             yield event("InterviewPrep", "done", interview_result)
+
+            yield event("Critic", "running")
+            critique = await critic(writer_draft, krav_result, match_result)
+            writer_result = await writer_revise(writer_draft, critique)
+            yield event("Critic", "done")
+
+            yield event("Writer", "done", writer_result)
 
             yield event("FERDIG", "done")
         finally:
