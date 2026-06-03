@@ -102,11 +102,6 @@ export default function Output({ content, running, vinklingOutput, sources, inte
           ))}
         </Collapsible>
       )}
-
-      <p className="ai-disclaimer">
-        AI-generert innhold. Kan inneholde feil eller utdatert informasjon –
-        kvalitetssikre alltid før bruk.
-      </p>
     </div>
   );
 }

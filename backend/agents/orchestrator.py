@@ -1,21 +1,61 @@
 """
 Agent: Orchestrator
 Leser krav og match-analyse og bestemmer hvordan pipelinen skal kjøres.
-Returnerer en JSON-plan med beslutninger om neste steg.
+Returnerer en plan med beslutninger om neste steg via structured output (tool use).
 """
 
-import json
 import logging
-import re
-from utils.llm import llm
+from utils.llm import llm_tool
 
 logger = logging.getLogger(__name__)
 
 SYSTEM = """
 Du er en pipeline-orchestrator for et jobbsøkersystem.
 Du skal vurdere hvor godt en kandidat matcher en stilling og bestemme hvordan analysen skal fortsette.
-Svar alltid med kun gyldig JSON — ingen forklaring utenfor JSON-blokken.
+Bruk verktøyet set_plan for å registrere planen.
 """
+
+DEFAULT_PLAN = {
+    "fit_level": "medium",
+    "fit_summary": "",
+    "skip_gap_detector": False,
+    "critic_rounds": 1,
+}
+
+PLAN_TOOL = {
+    "name": "set_plan",
+    "description": "Registrer pipeline-planen for videre kjøring.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "fit_level": {
+                "type": "string",
+                "enum": ["strong", "medium", "weak"],
+                "description": (
+                    "Hvor godt kandidaten matcher. 'weak' = mangler flere sentrale "
+                    "krav (brukeren bør advares). 'strong' = sterk match."
+                ),
+            },
+            "fit_summary": {
+                "type": "string",
+                "description": "Én setning om matchkvaliteten.",
+            },
+            "skip_gap_detector": {
+                "type": "boolean",
+                "description": "Hopp over GapDetector — sett true kun ved 'strong' match.",
+            },
+            "critic_rounds": {
+                "type": "integer",
+                "enum": [1, 2],
+                "description": (
+                    "Antall Critic-runder. 2 kun ved 'weak' eller tydelige gap "
+                    "som krever ekstra revisjon, ellers 1."
+                ),
+            },
+        },
+        "required": ["fit_level", "fit_summary", "skip_gap_detector", "critic_rounds"],
+    },
+}
 
 
 async def orchestrator(krav: str, match: str) -> dict:
@@ -28,31 +68,13 @@ Vurder kandidatens match mot stillingen basert på disse inputene:
 ## Match-analyse (styrker, gap, posisjonering)
 {match}
 
----
-
-Returner en JSON-plan med disse feltene:
-
-{{
-  "fit_level": "strong" | "medium" | "weak",
-  "fit_summary": "én setning om matchkvaliteten",
-  "skip_gap_detector": true | false,
-  "critic_rounds": 1 | 2
-}}
-
-Regler:
-- fit_level "weak": kandidaten mangler flere sentrale krav — brukeren bør advares
-- fit_level "strong": sterk match — hopp over GapDetector (skip_gap_detector: true)
-- critic_rounds 2: kun ved "weak" eller tydelige gap som krever ekstra revisjon
-- skip_gap_detector true: kun ved "strong" match
+Registrer planen med set_plan.
 """
-    result = await llm(SYSTEM, prompt, max_tokens=200)
+    plan = await llm_tool(SYSTEM, prompt, PLAN_TOOL, max_tokens=300)
 
-    json_match = re.search(r'\{.*\}', result, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
+    if plan is None:
+        logger.warning("Orchestrator returnerte ingen plan — bruker standardplan.")
+        return dict(DEFAULT_PLAN)
 
-    logger.warning("Orchestrator fikk ugyldig JSON — bruker standardplan. Svar: %r", result[:200])
-    return {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False, "critic_rounds": 1}
+    # Slå sammen med defaults så alle nøkler garantert finnes nedstrøms.
+    return {**DEFAULT_PLAN, **plan}
