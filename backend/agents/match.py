@@ -1,5 +1,5 @@
 """
-Agent 3: Match
+Agent: Match
 Sammenligner krav med kandidatens profil og finner styrker, gap og beste eksempler.
 """
 

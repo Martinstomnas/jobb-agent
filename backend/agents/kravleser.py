@@ -1,5 +1,5 @@
 """
-Agent 1: Kravleser
+Agent: Kravleser
 Leser stillingsannonsen og trekker ut eksplisitte krav og implisitte signaler.
 """
 

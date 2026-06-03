@@ -1,5 +1,5 @@
 """
-Agent 2: Research
+Agent: Research
 Søker aktivt på nett etter informasjon om selskapet.
 """
 

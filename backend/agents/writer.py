@@ -1,5 +1,5 @@
 """
-Agent 5: Writer
+Agent: Writer
 Produserer en søknadsdisposisjon – ikke en ferdig tekst.
 """
 

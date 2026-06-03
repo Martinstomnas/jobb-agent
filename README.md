@@ -83,6 +83,24 @@ npm run dev
 
 Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000`.
 
+## Testing
+
+26 tester som dekker parsing, input-validering og pipeline-orkestrering.
+LLM-kall mockes, så hele suiten kjører på under ett sekund uten API-kost.
+
+```bash
+cd backend
+pytest
+```
+
+- **Unit:** GapDetector-parsing, Orchestrator-fallback, input-validatorer
+- **Endepunkt:** PDF-opplasting (filtype, størrelse, korrupt fil)
+- **Integrasjon:** hele `/analyze`-flyten — event-sekvens, adaptiv pipeline,
+  guardrails, og de blokkerende human-in-the-loop-grenene (svar via `/answer`)
+
+AI-*kvalitet* (relevans, faktuell forankring) hører hjemme i en egen
+eval-suite — bevisst utenfor denne deterministiske testpakken.
+
 ## CV-input
 
 CV kan limes inn som tekst eller lastes opp som PDF (tekst-basert PDF — ikke skannede bilder).

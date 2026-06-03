@@ -1,5 +1,5 @@
 """
-Agent 6: InterviewPrep
+Agent: InterviewPrep
 Genererer intervjuforberedelse basert på krav, research og match-analyse.
 Kjøres parallelt med Writer.
 """

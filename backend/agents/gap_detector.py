@@ -1,5 +1,5 @@
 """
-Agent 4: Gap Detector
+Agent: Gap Detector
 Identifiserer domener i Research som kandidaten ikke har nevnt i CV,
 og genererer målrettet oppfølgingsspørsmål.
 """
