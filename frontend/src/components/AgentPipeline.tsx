@@ -14,10 +14,9 @@ const descriptions: Record<string, string> = {
 interface AgentPipelineProps {
   agents: string[];
   states: AgentStates;
-  running: boolean;
 }
 
-export default function AgentPipeline({ agents, states, running: _running }: AgentPipelineProps) {
+export default function AgentPipeline({ agents, states }: AgentPipelineProps) {
   return (
     <div className="pipeline">
       <div className="pipeline-title">Agenter</div>

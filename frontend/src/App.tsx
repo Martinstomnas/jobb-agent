@@ -198,7 +198,6 @@ export default function App() {
           <AgentPipeline
             agents={AGENTS}
             states={agentStates}
-            running={running}
           />
         </div>
         <div className="output-row">
