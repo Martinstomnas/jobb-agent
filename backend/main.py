@@ -172,6 +172,7 @@ async def analyze(input: JobInput):
             extra_context = ""
             if not plan.get("skip_gap_detector"):
                 active.add("GapDetector")
+                yield event("GapDetector", "running")
                 questions = await gap_detector(research_text, input.cv)
                 collected_answers = []
                 for question in questions:
@@ -183,6 +184,8 @@ async def analyze(input: JobInput):
                             collected_answers.append(answer)
                     except asyncio.TimeoutError:
                         yield event("GapDetector", "answered", "")
+                if not questions:
+                    yield event("GapDetector", "done", "Ingen gap å avklare")
                 active.discard("GapDetector")
                 extra_context = "\n".join(collected_answers)
 

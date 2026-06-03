@@ -52,6 +52,7 @@ export default function App() {
   const [interviewPrep, setInterviewPrep] = useState<string | null>(
     DEV ? mockData.mockInterviewPrep : null,
   );
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const handleSubmit = async ({
     jobPosting,
@@ -64,105 +65,115 @@ export default function App() {
     setAgentStates({});
     setPendingQuestion(null);
     setFitWarning(null);
+    setPipelineError(null);
 
-    const res = await fetch("http://localhost:8000/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_posting: jobPosting, cv }),
-    });
+    try {
+      const res = await fetch("http://localhost:8000/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_posting: jobPosting, cv }),
+      });
 
-    const reader = res.body!.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+      if (!res.ok) {
+        throw new Error(`Server svarte med ${res.status}`);
+      }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop()!;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
-        const raw = line.slice(5).trim();
-        if (!raw) continue;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop()!;
 
-        try {
-          const msg = JSON.parse(raw);
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const raw = line.slice(5).trim();
+          if (!raw) continue;
 
-          if (msg.agent === "FERDIG") {
-            setRunning(false);
-            continue;
-          }
+          try {
+            const msg = JSON.parse(raw);
 
-          if (msg.agent === "Orchestrator" && msg.status === "warning") {
-            setFitWarning({
-              summary: msg.content,
-              sessionId: msg.session_id,
-              key: Date.now(),
-            });
+            if (msg.agent === "FERDIG") {
+              setRunning(false);
+              continue;
+            }
+
+            if (msg.agent === "Orchestrator" && msg.status === "warning") {
+              setFitWarning({
+                summary: msg.content,
+                sessionId: msg.session_id,
+                key: Date.now(),
+              });
+              setAgentStates((prev) => ({
+                ...prev,
+                Orchestrator: { status: "warning", content: msg.content },
+              }));
+              continue;
+            }
+
+            if (msg.agent === "Orchestrator" && msg.status === "done") {
+              setFitWarning(null);
+            }
+
+            if (msg.agent === "GapDetector" && msg.status === "question") {
+              setPendingQuestion({
+                question: msg.content,
+                sessionId: msg.session_id,
+                key: Date.now(),
+              });
+              setAgentStates((prev) => ({
+                ...prev,
+                GapDetector: { status: "question", content: msg.content },
+              }));
+              continue;
+            }
+
+            if (msg.agent === "GapDetector" && msg.status === "answered") {
+              setPendingQuestion(null);
+              setAgentStates((prev) => ({
+                ...prev,
+                GapDetector: {
+                  status: "done",
+                  content: msg.content || "Hoppet over",
+                },
+              }));
+              continue;
+            }
+
             setAgentStates((prev) => ({
               ...prev,
-              Orchestrator: { status: "warning", content: msg.content },
+              [msg.agent]: { status: msg.status, content: msg.content },
             }));
-            continue;
-          }
 
-          if (msg.agent === "Orchestrator" && msg.status === "done") {
-            setFitWarning(null);
+            if (
+              msg.agent === "Research" &&
+              msg.status === "done" &&
+              msg.sources
+            ) {
+              setResearchSources(msg.sources);
+            }
+            if (msg.agent === "Match" && msg.status === "done") {
+              setVinklingOutput(msg.content);
+            }
+            if (msg.agent === "Writer" && msg.status === "done") {
+              setOutput(msg.content);
+            }
+            if (msg.agent === "InterviewPrep" && msg.status === "done") {
+              setInterviewPrep(msg.content);
+            }
+          } catch {
+            // ufullstendig chunk, ignorer
           }
-
-          if (msg.agent === "GapDetector" && msg.status === "question") {
-            setPendingQuestion({
-              question: msg.content,
-              sessionId: msg.session_id,
-              key: Date.now(),
-            });
-            setAgentStates((prev) => ({
-              ...prev,
-              GapDetector: { status: "question", content: msg.content },
-            }));
-            continue;
-          }
-
-          if (msg.agent === "GapDetector" && msg.status === "answered") {
-            setPendingQuestion(null);
-            setAgentStates((prev) => ({
-              ...prev,
-              GapDetector: {
-                status: "done",
-                content: msg.content || "Hoppet over",
-              },
-            }));
-            continue;
-          }
-
-          setAgentStates((prev) => ({
-            ...prev,
-            [msg.agent]: { status: msg.status, content: msg.content },
-          }));
-
-          if (
-            msg.agent === "Research" &&
-            msg.status === "done" &&
-            msg.sources
-          ) {
-            setResearchSources(msg.sources);
-          }
-          if (msg.agent === "Match" && msg.status === "done") {
-            setVinklingOutput(msg.content);
-          }
-          if (msg.agent === "Writer" && msg.status === "done") {
-            setOutput(msg.content);
-          }
-          if (msg.agent === "InterviewPrep" && msg.status === "done") {
-            setInterviewPrep(msg.content);
-          }
-        } catch {
-          // ufullstendig chunk, ignorer
         }
       }
+    } catch (e) {
+      setRunning(false);
+      setPipelineError(e instanceof Error ? e.message : "Noe gikk galt");
     }
   };
 
@@ -179,6 +190,12 @@ export default function App() {
       <main className="app-main">
         <div className="left-col">
           <InputForm onSubmit={handleSubmit} running={running} />
+          {pipelineError && (
+            <div className="pipeline-error">
+              <span className="pipeline-error-label">Feil</span>
+              <p>{pipelineError}</p>
+            </div>
+          )}
           {fitWarning && (
             <FitWarning
               key={fitWarning.key}

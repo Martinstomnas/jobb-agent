@@ -635,6 +635,30 @@ body {
   opacity: 0.85;
 }
 
+.pipeline-error {
+  background: var(--bg2);
+  border: 1px solid #c0392b;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pipeline-error-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #c0392b;
+}
+
+.pipeline-error p {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0;
+}
+
 .followup-card {
   background: var(--bg2);
   border: 1px solid var(--accent2);
