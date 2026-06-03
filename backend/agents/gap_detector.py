@@ -1,0 +1,46 @@
+"""
+Agent 4: Gap Detector
+Identifiserer domener i Research som kandidaten ikke har nevnt i CV,
+og genererer målrettet oppfølgingsspørsmål.
+"""
+
+from utils.llm import llm
+
+SYSTEM = """
+Du svarer med ett spørsmål per linje (maks 3 linjer) eller ordet INGEN.
+Ingen nummerering, ingen markdown, ingen forklaring. Bare spørsmålene eller INGEN.
+Still kun spørsmål om gap som er vesentlige for stillingen.
+"""
+
+
+async def gap_detector(research: str, cv: str) -> list[str]:
+    """
+    Returnerer 0–3 oppfølgingsspørsmål basert på domenegap mellom Research og CV.
+    """
+    prompt = f"""
+Research om selskapet:
+{research}
+
+Kandidatens CV:
+{cv}
+
+Finn de viktigste domenene/bransjene selskapet jobber i som kandidaten IKKE har nevnt i CV-en.
+For hvert vesentlig gap (maks 3): skriv ett spørsmål, ett per linje.
+Bare spørsmål som faktisk vil berike søknaden.
+Eksempel: "Jeg fant at de jobber mye med energisektoren – har du noen erfaring derfra?"
+INGEN hvis ingen reelle gap.
+
+Svar nå:"""
+    result = await llm(SYSTEM, prompt, max_tokens=250)
+    lines = result.strip().splitlines()
+    questions = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.upper().startswith("INGEN"):
+            continue
+        if len(line) > 200 or "**" in line or "#" in line:
+            continue
+        questions.append(line)
+        if len(questions) == 3:
+            break
+    return questions
