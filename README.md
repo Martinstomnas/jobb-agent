@@ -25,8 +25,6 @@ FastAPI /analyze
     ├── Critic         – evaluerer Writer-utkastet mot krav og match-analyse
     └── Writer revise  – forbedrer disposisjonen basert på kritikken
                          (kjøres 1–2 ganger avhengig av orchestrator-plan)
-
-POST /refine  →  Refiner-agent reviderer disposisjonen på brukerens instruksjon
 ```
 
 Resultater streames til frontend fortløpende via SSE.
@@ -43,7 +41,6 @@ Resultater streames til frontend fortløpende via SSE.
 | Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning               |
 | InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
 | Critic        | Evaluerer Writer-utkastet — identifiserer svakheter og mangler           |
-| Refiner       | Reviderer disposisjonen basert på brukerens instruksjon (on-demand)      |
 
 ## Agentiske mønstre
 
@@ -59,14 +56,11 @@ Writer og InterviewPrep kjøres parallelt. Deretter evaluerer Critic Writer-utka
 **Human-in-the-loop (GapDetector + FitWarning)**
 GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak match vises en advarsel med valget om å fortsette eller avbryte.
 
-**Iterativ forbedring (Refiner)**
-Brukeren kan be om endringer etter generering — f.eks. "gjør åpningen kortere". Refiner-agenten oppdaterer disposisjonen. Flere runder støttes.
-
 ## Output
 
 Over disposisjonen vises **Anbefalt vinkling** — én setning om hvordan kandidaten bør posisjonere seg.
 
-Under disposisjonen er et tekstfelt for iterativ forbedring og to sammenleggbare seksjoner:
+Under disposisjonen er to sammenleggbare seksjoner:
 - **Intervjuforberedelse** — spørsmål og svar-strategi
 - **Søkelogg** — websøk Research-agenten utførte
 

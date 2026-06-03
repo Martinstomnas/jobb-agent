@@ -22,7 +22,6 @@ from agents.writer import writer, writer_revise
 from agents.critic import critic
 from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
-from agents.refiner import refiner
 
 app = FastAPI()
 
@@ -65,10 +64,6 @@ class JobInput(BaseModel):
 class AnswerInput(BaseModel):
     answer: str
 
-
-class RefineInput(BaseModel):
-    disposition: str
-    instruction: str
 
 
 @app.on_event("startup")
@@ -221,12 +216,3 @@ async def analyze(input: JobInput):
     return EventSourceResponse(stream())
 
 
-@app.post("/refine")
-async def refine(input: RefineInput):
-    async def stream():
-        yield event("Refiner", "running")
-        result = await refiner(input.disposition, input.instruction)
-        yield event("Refiner", "done", result)
-        yield event("FERDIG", "done")
-
-    return EventSourceResponse(stream())

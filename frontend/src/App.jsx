@@ -29,49 +29,12 @@ export default function App() {
     DEV ? mockData.mockMatchOutput : null,
   );
   const [running, setRunning] = useState(false);
-  const [refining, setRefining] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState(null);
   const [fitWarning, setFitWarning] = useState(null);
   const [researchSources, setResearchSources] = useState(DEV ? mockData.mockResearchSources : null);
   const [interviewPrep, setInterviewPrep] = useState(
     DEV ? mockData.mockInterviewPrep : null,
   );
-
-  const handleRefine = async (instruction) => {
-    setRefining(true);
-    const res = await fetch("http://localhost:8000/refine", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ disposition: output, instruction }),
-    });
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
-        const raw = line.slice(5).trim();
-        if (!raw) continue;
-
-        try {
-          const msg = JSON.parse(raw);
-          if (msg.agent === "FERDIG") { setRefining(false); continue; }
-          if (msg.agent === "Refiner" && msg.status === "done") {
-            setOutput(msg.content);
-          }
-        } catch { /* incomplete chunk */ }
-      }
-    }
-  };
 
   const handleSubmit = async ({ jobPosting, cv }) => {
     setRunning(true);
@@ -222,8 +185,6 @@ export default function App() {
             vinklingOutput={vinklingOutput}
             sources={researchSources}
             interviewPrep={interviewPrep}
-            onRefine={handleRefine}
-            refining={refining}
           />
         </div>
       </main>

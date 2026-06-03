@@ -16,14 +16,7 @@ function Collapsible({ label, count, children }) {
   );
 }
 
-export default function Output({ content, running, vinklingOutput, sources, interviewPrep, onRefine, refining }) {
-  const [refinementText, setRefinementText] = useState("");
-
-  const handleSend = () => {
-    if (!refinementText.trim() || refining) return;
-    onRefine(refinementText.trim());
-    setRefinementText("");
-  };
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep }) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -71,26 +64,6 @@ export default function Output({ content, running, vinklingOutput, sources, inte
       <div className="output-content">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
-
-      {content && !running && (
-        <div className="refinement-form">
-          <input
-            className="refinement-input"
-            placeholder='Endre noe… (f.eks. "gjør åpningen kortere")'
-            value={refinementText}
-            onChange={(e) => setRefinementText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={refining}
-          />
-          <button
-            className="refinement-btn"
-            onClick={handleSend}
-            disabled={refining || !refinementText.trim()}
-          >
-            {refining ? <span className="spinner" /> : "Oppdater"}
-          </button>
-        </div>
-      )}
 
       {interviewPrep && (
         <Collapsible label="Intervjuforberedelse">
