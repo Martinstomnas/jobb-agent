@@ -2,10 +2,11 @@ const descriptions = {
   Kravleser: "Analyserer krav og signaler",
   Research: "Henter selskaps-info",
   Match: "Kobler krav med din profil",
+  Orchestrator: "Bestemmer pipeline-strategi",
   GapDetector: "Avklarer hull i profilen",
   Writer: "Lager søknadsdisposisjon",
   InterviewPrep: "Forbereder intervju",
-  Kontroll: "Validerer disposisjonen",
+  Critic: "Evaluerer og forbedrer utkastet",
 };
 
 export default function AgentPipeline({ agents, states, running }) {
@@ -30,6 +31,7 @@ export default function AgentPipeline({ agents, states, running }) {
                 {status === "running" && <span className="pulse" />}
                 {status === "done" && <span className="checkmark">ok</span>}
                 {status === "question" && <span className="pulse" style={{ background: "var(--accent2)" }} />}
+                {status === "warning" && <span className="pulse" style={{ background: "var(--running)" }} />}
                 {status === "idle" && <span className="idle-dot" />}
               </div>
               {i < agents.length - 1 && (

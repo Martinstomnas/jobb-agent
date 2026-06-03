@@ -1,25 +1,30 @@
 # Jobbsøker-agent
 
-Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon med innebygd self-reflection, intervjuforberedelse og iterativ forbedring.
+Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon. Pipelinen er dynamisk — en orchestrator-agent vurderer kandidatens match og bestemmer hvilke steg som er nødvendige.
 
 ## Arkitektur
 
-React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE). Åtte spesialiserte Claude-agenter kjører i sekvens og delvis parallelt.
+React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE). Spesialiserte Claude-agenter kjører i sekvens og delvis parallelt. Orchestratoren gjør pipelinen adaptiv basert på matchkvalitet.
 
 ```
 Input: Stillingsannonse + CV (tekst eller PDF)
     ↓
-FastAPI-backend (/analyze)
-    ├── Kravleser + Research   (parallelt)
+FastAPI /analyze
+    ├── Kravleser + Research      (parallelt)
     │     Kravleser:  trekker ut krav og implisitte signaler
     │     Research:   websøk etter selskapsinfo, kultur, tech-stack
-    ├── Match          – kobler krav med kandidatens CV, anbefaler posisjonering
-    ├── GapDetector    – stiller 0–3 oppfølgingsspørsmål der CV har hull
-    ├── Writer + InterviewPrep  (parallelt)
+    ├── Match          – kobler krav med kandidatens CV
+    ├── Orchestrator   – vurderer fit og bestemmer pipeline-strategi:
+    │     · "weak"   → advar bruker, vent på bekreftelse før videre
+    │     · "strong" → hopp over GapDetector
+    │     · svak match → kjør Critic to runder istedenfor én
+    ├── GapDetector    – stiller 0–3 oppfølgingsspørsmål (hoppes over ved sterk match)
+    ├── Writer + InterviewPrep    (parallelt)
     │     Writer:        lager søknadsdisposisjon (utkast)
     │     InterviewPrep: lager intervjuforberedelse
     ├── Critic         – evaluerer Writer-utkastet mot krav og match-analyse
     └── Writer revise  – forbedrer disposisjonen basert på kritikken
+                         (kjøres 1–2 ganger avhengig av orchestrator-plan)
 
 POST /refine  →  Refiner-agent reviderer disposisjonen på brukerens instruksjon
 ```
@@ -28,30 +33,40 @@ Resultater streames til frontend fortløpende via SSE.
 
 ## Agenter
 
-| Agent         | Ansvar                                                                  |
-|---------------|-------------------------------------------------------------------------|
-| Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                     |
-| Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                  |
+| Agent         | Ansvar                                                                   |
+|---------------|--------------------------------------------------------------------------|
+| Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                      |
+| Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                   |
 | Match         | Sterke matcher, gap og anbefalt posisjonering (brukes internt av Writer) |
-| GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                    |
-| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning              |
-| InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer     |
-| Critic        | Evaluerer Writer-utkastet — identifiserer svakheter og mangler          |
-| Refiner       | Reviderer disposisjonen basert på brukerens instruksjon (on-demand)     |
+| Orchestrator  | Vurderer fit-nivå og bestemmer dynamisk pipeline-strategi                |
+| GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                     |
+| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning               |
+| InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
+| Critic        | Evaluerer Writer-utkastet — identifiserer svakheter og mangler           |
+| Refiner       | Reviderer disposisjonen basert på brukerens instruksjon (on-demand)      |
 
-### Self-reflection-pattern
+## Agentiske mønstre
 
-Writer og InterviewPrep kjøres parallelt. Deretter evaluerer Critic Writer-utkastet mot kravene og match-analysen. Writer reviderer basert på kritikken. Brukeren mottar kun den forbedrede versjonen.
+**Dynamisk pipeline (Orchestrator)**
+Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
+- Svak match → pauser og ber brukeren bekrefte før analysen fortsetter
+- Sterk match → hopper over GapDetector
+- Svake kandidater får to runder med Critic i stedet for én
+
+**Self-reflection (Critic + Writer revise)**
+Writer og InterviewPrep kjøres parallelt. Deretter evaluerer Critic Writer-utkastet mot kravene. Writer reviderer basert på kritikken. Brukeren mottar kun den forbedrede versjonen.
+
+**Human-in-the-loop (GapDetector + FitWarning)**
+GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak match vises en advarsel med valget om å fortsette eller avbryte.
+
+**Iterativ forbedring (Refiner)**
+Brukeren kan be om endringer etter generering — f.eks. "gjør åpningen kortere". Refiner-agenten oppdaterer disposisjonen. Flere runder støttes.
 
 ## Output
 
-Primær output er **søknadsdisposisjonen** — en konkret guide for hva kandidaten bør skrive, hvilke erfaringer å trekke frem og hvordan vinkle hvert punkt. Brukeren skriver sin egen søknad ut fra denne.
-
 Over disposisjonen vises **Anbefalt vinkling** — én setning om hvordan kandidaten bør posisjonere seg.
 
-Under disposisjonen er et **tekstfelt for iterativ forbedring**: brukeren kan skrive instrukser som "gjør åpningen kortere" eller "tonen er for formell", og Refiner-agenten oppdaterer disposisjonen. Flere runder støttes.
-
-Sammenleggbare seksjoner:
+Under disposisjonen er et tekstfelt for iterativ forbedring og to sammenleggbare seksjoner:
 - **Intervjuforberedelse** — spørsmål og svar-strategi
 - **Søkelogg** — websøk Research-agenten utførte
 
