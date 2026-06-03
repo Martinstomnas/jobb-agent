@@ -6,11 +6,8 @@ import FollowUpQuestion from "./components/FollowUpQuestion";
 import FitWarning from "./components/FitWarning";
 import "./App.css";
 
-import * as mockData from "./dev/mockData";
 import type { AgentStates, ResearchSource } from "./types";
 import { API_URL } from "./config";
-
-const DEV = true;
 
 const AGENTS = [
   "Kravleser",
@@ -37,22 +34,16 @@ interface FitWarningState {
 
 export default function App() {
   const [agentStates, setAgentStates] = useState<AgentStates>({});
-  const [output, setOutput] = useState<string | null>(
-    DEV ? mockData.mockOutput : null,
-  );
-  const [vinklingOutput, setVinklingOutput] = useState<string | null>(
-    DEV ? mockData.mockMatchOutput : null,
-  );
+  const [output, setOutput] = useState<string | null>(null);
+  const [vinklingOutput, setVinklingOutput] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [pendingQuestion, setPendingQuestion] =
     useState<PendingQuestion | null>(null);
   const [fitWarning, setFitWarning] = useState<FitWarningState | null>(null);
   const [researchSources, setResearchSources] = useState<
     ResearchSource[] | null
-  >(DEV ? mockData.mockResearchSources : null);
-  const [interviewPrep, setInterviewPrep] = useState<string | null>(
-    DEV ? mockData.mockInterviewPrep : null,
-  );
+  >(null);
+  const [interviewPrep, setInterviewPrep] = useState<string | null>(null);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const handleSubmit = async ({
@@ -213,10 +204,7 @@ export default function App() {
           )}
         </div>
         <div className="right-col">
-          <AgentPipeline
-            agents={AGENTS}
-            states={agentStates}
-          />
+          <AgentPipeline agents={AGENTS} states={agentStates} />
         </div>
         <div className="output-row">
           <Output

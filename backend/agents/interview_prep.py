@@ -50,4 +50,4 @@ Svar: [Én konkret tilnærming til svar – hva skal kandidaten fremheve, hvilke
 Spørsmålene skal vise at kandidaten har satt seg inn i selskapet og tenker strategisk.
 Format: én setning per spørsmål, ingen forklaring.
 """
-    return await llm(SYSTEM, prompt, max_tokens=2000)
+    return await llm(SYSTEM, prompt, max_tokens=3500)

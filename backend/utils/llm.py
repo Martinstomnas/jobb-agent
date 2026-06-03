@@ -1,14 +1,27 @@
 """
 Delt LLM-klient. Bruker Anthropic Claude (async).
 """
+import logging
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import anthropic
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
-client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# Per-kall timeout og automatiske retries. SDK-en retry-er transiente feil
+# (429, 5xx, connection) med eksponentiell backoff og respekterer Retry-After —
+# derfor konfigurerer vi den her i stedet for å håndrulle en backoff-løkke.
+REQUEST_TIMEOUT = 60.0  # sekunder per kall — hindrer hengende forespørsler
+MAX_RETRIES = 3
+
+client = anthropic.AsyncAnthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+    timeout=REQUEST_TIMEOUT,
+    max_retries=MAX_RETRIES,
+)
 
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -20,6 +33,8 @@ async def api_errors():
         yield
     except anthropic.RateLimitError:
         raise RuntimeError("Rate limit nådd — prøv igjen om litt")
+    except anthropic.APITimeoutError:
+        raise RuntimeError("Forespørselen tok for lang tid — prøv igjen")
     except anthropic.APIConnectionError:
         raise RuntimeError("Kunne ikke koble til Anthropic API")
     except anthropic.AuthenticationError:
@@ -35,6 +50,10 @@ async def llm(system: str, user: str, max_tokens: int = 1500) -> str:
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user}],
+        )
+    if response.stop_reason == "max_tokens":
+        logger.warning(
+            "Svar avkuttet av max_tokens (%d) — vurder å heve grensen.", max_tokens
         )
     return response.content[0].text
 

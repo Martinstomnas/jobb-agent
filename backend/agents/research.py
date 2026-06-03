@@ -5,6 +5,10 @@ Søker aktivt på nett etter informasjon om selskapet.
 
 from utils.llm import MODEL, api_errors, client
 
+# Web-søk gjør flere runder server-side og tar lengre tid enn et vanlig kall,
+# så vi gir dette kallet en romsligere timeout enn klient-standarden.
+RESEARCH_TIMEOUT = 120.0
+
 
 async def research(job_posting: str) -> tuple[str, list[dict]]:
     """
@@ -12,7 +16,7 @@ async def research(job_posting: str) -> tuple[str, list[dict]]:
     {"query": str, "results": [{"title": str, "url": str}]}.
     """
     async with api_errors():
-        response = await client.messages.create(
+        response = await client.with_options(timeout=RESEARCH_TIMEOUT).messages.create(
             model=MODEL,
             max_tokens=2000,
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
