@@ -112,6 +112,11 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
           "Analyser"
         )}
       </button>
+
+      <p className="privacy-note">
+        Stillingsannonse og CV sendes til Anthropics API for analyse. Innholdet
+        lagres ikke av denne appen.
+      </p>
     </form>
   );
 }
