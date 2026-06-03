@@ -217,7 +217,10 @@ async def analyze(input: JobInput):
             yield event("InterviewPrep", "done", interview_result)
 
             # Critic: antall runder bestemt av orchestrator
-            critic_rounds = plan.get("critic_rounds", 1)
+            try:
+                critic_rounds = max(1, min(2, int(plan.get("critic_rounds", 1) or 1)))
+            except (TypeError, ValueError):
+                critic_rounds = 1
             writer_result = writer_draft
             for _ in range(critic_rounds):
                 active.add("Critic")
