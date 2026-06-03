@@ -3,9 +3,11 @@ Integrasjonstest av /analyze-pipelinen. Alle agenter mockes, så vi verifiserer
 selve orkestreringen og SSE-event-sekvensen uten å bruke API-kreditter.
 """
 
+import asyncio
 import json
 from unittest.mock import AsyncMock
 
+import httpx
 from fastapi.testclient import TestClient
 
 import main
@@ -109,4 +111,127 @@ def test_critic_rounds_clamp(monkeypatch):
 
     # critic skal ha kjørt maks 2 ganger til tross for critic_rounds=99.
     assert main.critic.await_count == 2
+    assert events[-1]["agent"] == "FERDIG"
+
+
+# --- Human-in-the-loop: blokkerende grener ---------------------------------
+#
+# Disse grenene venter på et brukersvar via /answer mens SSE-strømmen står åpen.
+# httpx' ASGITransport buffrer responsen, så vi kan ikke lese strømmen event for
+# event mens pipelinen blokkerer. I stedet kjører vi to samtidige tasks:
+#   - consume(): poster /analyze og samler alle eventene
+#   - drive():   oppdager sesjonen i _answer_queues og poster svar via /answer
+# Svaret går altså gjennom det ekte endepunktet, og pipelinen låses opp slik at
+# consume() til slutt fullfører.
+
+
+def _parse_events(text: str) -> list[dict]:
+    out = []
+    for line in text.splitlines():
+        if line.startswith("data:"):
+            raw = line[5:].strip()
+            if raw:
+                out.append(json.loads(raw))
+    return out
+
+
+async def _stream_with_answers(payload: dict, answers: list[str]) -> list[dict]:
+    events: list[dict] = []
+
+    async def consume():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            res = await client.post("/analyze", json=payload)
+            events.extend(_parse_events(res.text))
+
+    async def drive():
+        pending = list(answers)
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            while pending:
+                await asyncio.sleep(0.01)
+                for sid in list(main._answer_queues.keys()):
+                    if pending:
+                        await client.post(
+                            f"/answer/{sid}", json={"answer": pending.pop(0)}
+                        )
+                        break
+
+    await asyncio.gather(consume(), drive())
+    return events
+
+
+async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
+    plan = {
+        "fit_level": "medium",
+        "fit_summary": "",
+        "skip_gap_detector": False,
+        "critic_rounds": 1,
+    }
+    _patch_agents(monkeypatch, plan=plan)
+    monkeypatch.setattr(
+        main, "gap_detector", AsyncMock(return_value=["Erfaring med energi?"])
+    )
+
+    events = await asyncio.wait_for(
+        _stream_with_answers(
+            {"job_posting": "a", "cv": "c"}, answers=["Ja, tre år i Equinor"]
+        ),
+        timeout=10,
+    )
+
+    # Svaret kvitteres i strømmen ...
+    answered = [
+        e for e in events
+        if e["agent"] == "GapDetector" and e["status"] == "answered"
+    ]
+    assert any("Equinor" in e["content"] for e in answered)
+    # ... og sendes videre som extra_context til Writer.
+    assert "Equinor" in main.writer.await_args.kwargs["extra_context"]
+    assert events[-1]["agent"] == "FERDIG"
+
+
+async def test_weak_match_fortsett_kjorer_videre(monkeypatch):
+    plan = {
+        "fit_level": "weak",
+        "fit_summary": "Svak match.",
+        "skip_gap_detector": False,
+        "critic_rounds": 1,
+    }
+    _patch_agents(monkeypatch, plan=plan)
+
+    events = await asyncio.wait_for(
+        _stream_with_answers({"job_posting": "a", "cv": "c"}, answers=["fortsett"]),
+        timeout=10,
+    )
+
+    assert any(
+        e["agent"] == "Orchestrator" and e["status"] == "warning" for e in events
+    )
+    # "fortsett" -> pipelinen kjører videre til Writer.
+    assert main.writer.await_count == 1
+    assert events[-1]["agent"] == "FERDIG"
+
+
+async def test_weak_match_avbryt_stopper_pipelinen(monkeypatch):
+    plan = {
+        "fit_level": "weak",
+        "fit_summary": "Svak match.",
+        "skip_gap_detector": False,
+        "critic_rounds": 1,
+    }
+    _patch_agents(monkeypatch, plan=plan)
+
+    events = await asyncio.wait_for(
+        _stream_with_answers({"job_posting": "a", "cv": "c"}, answers=["avbryt"]),
+        timeout=10,
+    )
+
+    assert any(
+        e["agent"] == "Orchestrator" and e["status"] == "warning" for e in events
+    )
+    # "avbryt" -> Writer skal aldri kjøre.
+    assert main.writer.await_count == 0
     assert events[-1]["agent"] == "FERDIG"
