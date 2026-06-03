@@ -5,8 +5,11 @@ Returnerer en JSON-plan med beslutninger om neste steg.
 """
 
 import json
+import logging
 import re
 from utils.llm import llm
+
+logger = logging.getLogger(__name__)
 
 SYSTEM = """
 Du er en pipeline-orchestrator for et jobbsøkersystem.
@@ -51,4 +54,5 @@ Regler:
         except json.JSONDecodeError:
             pass
 
+    logger.warning("Orchestrator fikk ugyldig JSON — bruker standardplan. Svar: %r", result[:200])
     return {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False, "critic_rounds": 1}

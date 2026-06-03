@@ -19,21 +19,22 @@ async def research(job_posting: str) -> tuple[str, list[dict]]:
     Returnerer (tekst, søkelogg) der søkelogg er en liste av
     {"query": str, "results": [{"title": str, "url": str}]}.
     """
-    response = await client.messages.create(
-        model=MODEL,
-        max_tokens=2000,
-        tools=[{"type": "web_search_20250305", "name": "web_search"}],
-        system="""
+    try:
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=2000,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            system="""
 Du er en researcher som hjelper jobbsøkere å forstå selskaper de søker hos.
 Søk aktivt på nett for å finne fersk og relevant informasjon.
 Fokuser på: kultur, tech-stack, verdier, kunder, nyheter, og hva ansatte sier.
 Vær faktabasert. Skill tydelig mellom det du fant på nett og egne antakelser.
 Svar på norsk.
 """,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""
 Analyser denne stillingsannonsen og finn ut mest mulig om selskapet.
 Søk etter: selskapsnavn + kultur, tech-stack, ansatte, nyheter det siste året.
 
@@ -49,9 +50,17 @@ Lever en strukturert oppsummering:
 ## Aktuelt (nyheter, vekst, prosjekter)
 ## Hva tidligere/nåværende ansatte sier [USIKKER hvis ikke funnet]
 """,
-            }
-        ],
-    )
+                }
+            ],
+        )
+    except anthropic.RateLimitError:
+        raise RuntimeError("Rate limit nådd — prøv igjen om litt")
+    except anthropic.APIConnectionError:
+        raise RuntimeError("Kunne ikke koble til Anthropic API")
+    except anthropic.AuthenticationError:
+        raise RuntimeError("Ugyldig API-nøkkel")
+    except anthropic.APIStatusError as e:
+        raise RuntimeError(f"API-feil ({e.status_code})")
 
     sources: list[dict] = []
 
