@@ -23,9 +23,6 @@ async def writer(
     krav: str,
     research: str,
     match: str,
-    kandidatnavn: str = "",
-    arbeidsgiver: str = "arbeidsgiveren",
-    rolle: str = "stillingen",
     extra_context: str = "",
 ) -> str:
     extra_section = (
@@ -35,10 +32,6 @@ async def writer(
     )
     prompt = f"""
 Lag en søknadsdisposisjon for kandidaten basert på analysen under.
-
-Kandidat: {kandidatnavn or "Ikke oppgitt"}
-Arbeidsgiver: {arbeidsgiver}
-Rolle: {rolle}
 
 Krav fra stillingsannonsen:
 {krav}

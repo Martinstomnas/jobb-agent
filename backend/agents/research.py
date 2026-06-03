@@ -7,6 +7,8 @@ import os
 import anthropic
 from dotenv import load_dotenv
 
+from utils.llm import MODEL
+
 load_dotenv()
 
 client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -18,7 +20,7 @@ async def research(job_posting: str) -> tuple[str, list[dict]]:
     {"query": str, "results": [{"title": str, "url": str}]}.
     """
     response = await client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=MODEL,
         max_tokens=2000,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         system="""

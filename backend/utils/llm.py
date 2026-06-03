@@ -9,11 +9,13 @@ load_dotenv()
 
 client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
+MODEL = "claude-haiku-4-5-20251001"
+
 
 async def llm(system: str, user: str, max_tokens: int = 1500) -> str:
     try:
         response = await client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=MODEL,
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user}],
