@@ -8,6 +8,7 @@ import json
 import re
 import time
 import uuid
+from contextlib import asynccontextmanager
 import fitz  # pymupdf
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +24,30 @@ from agents.critic import critic
 from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
 
-app = FastAPI()
+# session_id -> asyncio.Queue som Writer venter på svar fra
+_answer_queues: dict[str, asyncio.Queue] = {}
+_session_created: dict[str, float] = {}
+_SESSION_TTL = 600  # sekunder før en hengende sesjon ryddes opp
+
+
+async def _cleanup_stale_sessions() -> None:
+    while True:
+        await asyncio.sleep(60)
+        cutoff = time.time() - _SESSION_TTL
+        stale = [sid for sid, t in list(_session_created.items()) if t < cutoff]
+        for sid in stale:
+            _answer_queues.pop(sid, None)
+            _session_created.pop(sid, None)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = asyncio.create_task(_cleanup_stale_sessions())
+    yield
+    task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,11 +55,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# session_id -> asyncio.Queue som Writer venter på svar fra
-_answer_queues: dict[str, asyncio.Queue] = {}
-_session_created: dict[str, float] = {}
-_SESSION_TTL = 600  # sekunder før en hengende sesjon ryddes opp
 
 
 class JobInput(BaseModel):
@@ -63,21 +82,6 @@ class JobInput(BaseModel):
 
 class AnswerInput(BaseModel):
     answer: str
-
-
-
-@app.on_event("startup")
-async def startup():
-    async def _cleanup_stale_sessions():
-        while True:
-            await asyncio.sleep(60)
-            cutoff = time.time() - _SESSION_TTL
-            stale = [sid for sid, t in list(_session_created.items()) if t < cutoff]
-            for sid in stale:
-                _answer_queues.pop(sid, None)
-                _session_created.pop(sid, None)
-
-    asyncio.create_task(_cleanup_stale_sessions())
 
 
 def event(agent: str, status: str, content: str = "", **extra):

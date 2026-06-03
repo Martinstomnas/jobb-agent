@@ -8,6 +8,7 @@ import "./App.css";
 
 import * as mockData from "./dev/mockData";
 import type { AgentStates, ResearchSource } from "./types";
+import { API_URL } from "./config";
 
 const DEV = true;
 
@@ -68,7 +69,7 @@ export default function App() {
     setPipelineError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/analyze", {
+      const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ job_posting: jobPosting, cv }),

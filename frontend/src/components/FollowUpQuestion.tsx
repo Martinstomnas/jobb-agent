@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 
 interface FollowUpQuestionProps {
   question: string;
@@ -11,7 +12,7 @@ export default function FollowUpQuestion({ question, sessionId }: FollowUpQuesti
 
   const postAnswer = async (text: string) => {
     setSubmitting(true);
-    await fetch(`http://localhost:8000/answer/${sessionId}`, {
+    await fetch(`${API_URL}/answer/${sessionId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answer: text }),

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { API_URL } from "../config";
 
 interface InputFormProps {
   onSubmit: (data: { jobPosting: string; cv: string }) => void;
@@ -20,7 +21,7 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("http://localhost:8000/extract-pdf", {
+      const res = await fetch(`${API_URL}/extract-pdf`, {
         method: "POST",
         body: formData,
       });
