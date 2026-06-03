@@ -1,4 +1,6 @@
-const descriptions = {
+import type { AgentStates, AgentStatus } from "../types";
+
+const descriptions: Record<string, string> = {
   Kravleser: "Analyserer krav og signaler",
   Research: "Henter selskaps-info",
   Match: "Kobler krav med din profil",
@@ -9,14 +11,20 @@ const descriptions = {
   Critic: "Evaluerer og forbedrer utkastet",
 };
 
-export default function AgentPipeline({ agents, states, running }) {
+interface AgentPipelineProps {
+  agents: string[];
+  states: AgentStates;
+  running: boolean;
+}
+
+export default function AgentPipeline({ agents, states, running: _running }: AgentPipelineProps) {
   return (
     <div className="pipeline">
       <div className="pipeline-title">Agenter</div>
       <div className="pipeline-agents">
         {agents.map((agent, i) => {
           const state = states[agent];
-          const status = state?.status ?? "idle";
+          const status: AgentStatus = state?.status ?? "idle";
 
           return (
             <div key={agent} className={`agent-card agent-${status}`}>

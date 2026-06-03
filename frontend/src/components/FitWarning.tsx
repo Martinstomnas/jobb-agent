@@ -1,5 +1,10 @@
-export default function FitWarning({ summary, sessionId }) {
-  const postAnswer = async (answer) => {
+interface FitWarningProps {
+  summary: string;
+  sessionId: string;
+}
+
+export default function FitWarning({ summary, sessionId }: FitWarningProps) {
+  const postAnswer = async (answer: string) => {
     await fetch(`http://localhost:8000/answer/${sessionId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

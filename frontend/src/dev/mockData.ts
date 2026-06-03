@@ -1,3 +1,5 @@
+import type { ResearchSource } from "../types";
+
 export const mockOutput = `## Åpning
 
 Start med perioden hos Kartverket der du tok ansvar for brukerstøtte på dagtid — dette er den mest direkte erfaringen og setter tonen for resten.
@@ -30,8 +32,7 @@ Ikke list teknologier uten kontekst. Unngå "løsningsorientert" og "strukturert
 
 export const mockMatchOutput = `Fremstill deg som en raskt lærende med bevist brukerstøtteerfaring som mangler formell sertifisering — ikke som en junior uten erfaring.`;
 
-
-export const mockResearchSources = [
+export const mockResearchSources: ResearchSource[] = [
   {
     query: "Sopra Steria Norge IT-konsulent kultur verdier",
     results: [

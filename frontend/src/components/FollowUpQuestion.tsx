@@ -1,10 +1,15 @@
 import { useState } from "react";
 
-export default function FollowUpQuestion({ question, sessionId }) {
+interface FollowUpQuestionProps {
+  question: string;
+  sessionId: string;
+}
+
+export default function FollowUpQuestion({ question, sessionId }: FollowUpQuestionProps) {
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const postAnswer = async (text) => {
+  const postAnswer = async (text: string) => {
     setSubmitting(true);
     await fetch(`http://localhost:8000/answer/${sessionId}`, {
       method: "POST",
@@ -12,10 +17,10 @@ export default function FollowUpQuestion({ question, sessionId }) {
       body: JSON.stringify({ answer: text }),
     });
     // Ikke oppdater lokal state her — SSE-strømmen sender "answered" og
-    // eventuelt neste "question", og App.jsx håndterer mounting/unmounting.
+    // eventuelt neste "question", og App.tsx håndterer mounting/unmounting.
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     postAnswer(answer.trim());
   };

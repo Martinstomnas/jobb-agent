@@ -1,8 +1,14 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import type { ResearchSource } from "../types";
 
+interface CollapsibleProps {
+  label: string;
+  count?: string | null;
+  children: React.ReactNode;
+}
 
-function Collapsible({ label, count, children }) {
+function Collapsible({ label, count, children }: CollapsibleProps) {
   const [open, setOpen] = useState(false);
   return (
     <div className="sources-section">
@@ -16,7 +22,15 @@ function Collapsible({ label, count, children }) {
   );
 }
 
-export default function Output({ content, running, vinklingOutput, sources, interviewPrep }) {
+interface OutputProps {
+  content: string | null;
+  running: boolean;
+  vinklingOutput: string | null;
+  sources: ResearchSource[] | null;
+  interviewPrep: string | null;
+}
+
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep }: OutputProps) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -49,7 +63,7 @@ export default function Output({ content, running, vinklingOutput, sources, inte
         ) : (
           <span className="output-done-badge">Søknadsdisposisjon</span>
         )}
-        <button className="copy-btn" onClick={() => navigator.clipboard.writeText(content)}>
+        <button className="copy-btn" onClick={() => navigator.clipboard.writeText(content!)}>
           Kopier
         </button>
       </div>
@@ -62,7 +76,7 @@ export default function Output({ content, running, vinklingOutput, sources, inte
       )}
 
       <div className="output-content">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown>{content!}</ReactMarkdown>
       </div>
 
       {interviewPrep && (

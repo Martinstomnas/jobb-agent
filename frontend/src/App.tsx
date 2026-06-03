@@ -6,10 +6,10 @@ import FollowUpQuestion from "./components/FollowUpQuestion";
 import FitWarning from "./components/FitWarning";
 import "./App.css";
 
-import * as mockData from "./dev/mockData.js";
+import * as mockData from "./dev/mockData";
+import type { AgentStates, ResearchSource } from "./types";
 
-// Sett til true for å vise dummy-data uten å kjøre backend
-const DEV = true;
+const DEV = false;
 
 const AGENTS = [
   "Kravleser",
@@ -22,21 +22,35 @@ const AGENTS = [
   "Critic",
 ];
 
+interface PendingQuestion {
+  question: string;
+  sessionId: string;
+  key: number;
+}
+
+interface FitWarningState {
+  summary: string;
+  sessionId: string;
+  key: number;
+}
+
 export default function App() {
-  const [agentStates, setAgentStates] = useState({});
-  const [output, setOutput] = useState(DEV ? mockData.mockOutput : null);
-  const [vinklingOutput, setVinklingOutput] = useState(
+  const [agentStates, setAgentStates] = useState<AgentStates>({});
+  const [output, setOutput] = useState<string | null>(DEV ? mockData.mockOutput : null);
+  const [vinklingOutput, setVinklingOutput] = useState<string | null>(
     DEV ? mockData.mockMatchOutput : null,
   );
   const [running, setRunning] = useState(false);
-  const [pendingQuestion, setPendingQuestion] = useState(null);
-  const [fitWarning, setFitWarning] = useState(null);
-  const [researchSources, setResearchSources] = useState(DEV ? mockData.mockResearchSources : null);
-  const [interviewPrep, setInterviewPrep] = useState(
+  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
+  const [fitWarning, setFitWarning] = useState<FitWarningState | null>(null);
+  const [researchSources, setResearchSources] = useState<ResearchSource[] | null>(
+    DEV ? mockData.mockResearchSources : null,
+  );
+  const [interviewPrep, setInterviewPrep] = useState<string | null>(
     DEV ? mockData.mockInterviewPrep : null,
   );
 
-  const handleSubmit = async ({ jobPosting, cv }) => {
+  const handleSubmit = async ({ jobPosting, cv }: { jobPosting: string; cv: string }) => {
     setRunning(true);
     setAgentStates({});
     setPendingQuestion(null);
@@ -48,7 +62,7 @@ export default function App() {
       body: JSON.stringify({ job_posting: jobPosting, cv }),
     });
 
-    const reader = res.body.getReader();
+    const reader = res.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
 
@@ -58,7 +72,7 @@ export default function App() {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop();
+      buffer = lines.pop()!;
 
       for (const line of lines) {
         if (!line.startsWith("data:")) continue;
@@ -120,11 +134,7 @@ export default function App() {
             [msg.agent]: { status: msg.status, content: msg.content },
           }));
 
-          if (
-            msg.agent === "Research" &&
-            msg.status === "done" &&
-            msg.sources
-          ) {
+          if (msg.agent === "Research" && msg.status === "done" && msg.sources) {
             setResearchSources(msg.sources);
           }
           if (msg.agent === "Match" && msg.status === "done") {

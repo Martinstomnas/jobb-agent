@@ -1,14 +1,19 @@
 import { useRef, useState } from "react";
 
-export default function InputForm({ onSubmit, running }) {
+interface InputFormProps {
+  onSubmit: (data: { jobPosting: string; cv: string }) => void;
+  running: boolean;
+}
+
+export default function InputForm({ onSubmit, running }: InputFormProps) {
   const [jobPosting, setJobPosting] = useState("");
   const [cv, setCv] = useState("");
   const [extraInfo, setExtraInfo] = useState("");
-  const [cvFile, setCvFile] = useState(null);
+  const [cvFile, setCvFile] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePdfUpload = async (e) => {
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -33,7 +38,7 @@ export default function InputForm({ onSubmit, running }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!jobPosting.trim() || !cv.trim()) return;
     const combined = extraInfo.trim()
