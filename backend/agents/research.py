@@ -45,6 +45,10 @@ Lever en strukturert oppsummering:
 ## Tech-stack og arbeidsmetoder
 ## Aktuelt (nyheter, vekst, prosjekter)
 ## Hva tidligere/nåværende ansatte sier [USIKKER hvis ikke funnet]
+
+## Kildegrunnlag
+- Bekreftet fra nett: (list punktvis hva som er dokumentert i søkeresultatene)
+- Antatt / ikke funnet: (list punktvis hva som er antatt eller ikke bekreftet)
 """,
                 }
             ],
@@ -71,7 +75,18 @@ Lever en strukturert oppsummering:
                 if sources:
                     sources[-1]["results"].append({"title": title, "url": url})
 
+    seen_urls: set[str] = set()
+    for entry in sources:
+        unique: list[dict] = []
+        for r in entry["results"]:
+            if r["url"] not in seen_urls:
+                seen_urls.add(r["url"])
+                unique.append(r)
+        entry["results"] = unique
+
     text = "\n".join(
         block.text for block in response.content if hasattr(block, "text")
     )
+    if not text.strip():
+        return "Ingen research-data tilgjengelig.", sources
     return text, sources
