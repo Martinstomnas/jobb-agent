@@ -24,10 +24,16 @@ async def writer(
     research: str,
     match: str,
     extra_context: str = "",
+    validation_issues: str = "",
 ) -> str:
     extra_section = (
         f"\nTilleggsinformasjon kandidaten har oppgitt:\n{extra_context}\n"
         if extra_context
+        else ""
+    )
+    issues_section = (
+        f"\nFAKTASJEKK – Disse påstandene i forrige utkast ble ikke funnet i CV:\n{validation_issues}\nRett opp disse punktene i det nye utkastet.\n"
+        if validation_issues
         else ""
     )
     prompt = f"""
@@ -41,8 +47,7 @@ Research om arbeidsgiver:
 
 Match-analyse (styrker, gap, anbefalt posisjonering):
 {match}
-{extra_section}
-
+{extra_section}{issues_section}
 ---
 
 Lever disposisjonen i dette formatet:

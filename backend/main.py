@@ -251,12 +251,31 @@ async def analyze(request: Request, input: JobInput):
             yield event("InterviewPrep", "done", interview_result)
             yield event("Writer", "done", writer_result)
 
-            # Validator: faktasjekk Writer-output mot CV og research
-            active.add("Validator")
-            yield event("Validator", "running")
-            validation = await validator(writer_result, input.cv, krav_result, research_text)
-            active.discard("Validator")
-            yield event("Validator", "done", validation)
+            # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang)
+            draft = writer_result
+            for _attempt in range(2):
+                active.add("Validator")
+                yield event("Validator", "running")
+                validation = await validator(draft, input.cv, krav_result, research_text)
+                active.discard("Validator")
+
+                has_issues = "ingen avvik" not in validation.lower()
+                if not has_issues or _attempt == 1:
+                    yield event("Validator", "done", validation)
+                    break
+
+                yield event("Validator", "issues", validation)
+                active.add("Writer")
+                yield event("Writer", "running")
+                draft = await writer(
+                    krav_result,
+                    research_text,
+                    match_result,
+                    extra_context=extra_context,
+                    validation_issues=validation,
+                )
+                active.discard("Writer")
+                yield event("Writer", "done", draft)
 
             yield event("FERDIG", "done")
 

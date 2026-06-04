@@ -92,6 +92,32 @@ def test_match_vinkling_robust_mot_omformulert_overskrift(monkeypatch):
     assert "Vinkle annerledes." in match_done["content"]
 
 
+def test_validator_utloser_regenerering_ved_funn(monkeypatch):
+    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    _patch_agents(monkeypatch, plan=plan)
+    monkeypatch.setattr(
+        main,
+        "validator",
+        AsyncMock(side_effect=["- Påstand ikke funnet i CV.", "Ingen avvik funnet."]),
+    )
+    monkeypatch.setattr(main, "writer", AsyncMock(side_effect=["UTKAST_V1", "UTKAST_V2"]))
+
+    with TestClient(app) as client:
+        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
+        events = _events(res.text)
+
+    statuses = [(e["agent"], e["status"]) for e in events]
+    assert ("Validator", "issues") in statuses
+    assert ("Writer", "running") in statuses[statuses.index(("Validator", "issues")):], \
+        "Writer skal restartes etter validator-funn"
+    assert main.writer.await_count == 2
+    assert main.validator.await_count == 2
+    writer_done_events = [e for e in events if e["agent"] == "Writer" and e["status"] == "done"]
+    assert writer_done_events[-1]["content"] == "UTKAST_V2"
+    validator_done = next(e for e in events if e["agent"] == "Validator" and e["status"] == "done")
+    assert "Ingen avvik" in validator_done["content"]
+
+
 def test_strong_match_hopper_over_gap_detector(monkeypatch):
     plan = {
         "fit_level": "strong",

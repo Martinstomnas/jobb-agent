@@ -21,7 +21,7 @@ FastAPI /analyze
     ├── Writer + InterviewPrep    (parallelt)
     │     Writer:        lager søknadsdisposisjon
     │     InterviewPrep: lager intervjuforberedelse
-    └── Validator      – faktasjekker Writer-output mot CV og research
+    └── Validator      – faktasjekker Writer-output; funn utløser regenerering (maks 1 gang)
 ```
 
 Resultater streames til frontend fortløpende via SSE.
@@ -37,7 +37,7 @@ Resultater streames til frontend fortløpende via SSE.
 | GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                     |
 | Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning               |
 | InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
-| Validator     | Faktasjekker Writer-output — flaggerer påstander uforankret i CV         |
+| Validator     | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon |
 
 ## Agentiske mønstre
 
@@ -48,7 +48,7 @@ Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
 - Sterk match → hopper over GapDetector
 
 **Faktaforankring (Validator)**
-Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV og research — flagger påstander som ikke kan spores til kildematerialet. Brukeren ser funnene under disposisjonen.
+Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV og research. Hvis påstander ikke kan spores til kildematerialet, sendes funnene tilbake til Writer som regenererer utkastet. Validator kjøres én gang til på det reviderte utkastet. Maks én regenereringssyklus.
 
 **Human-in-the-loop (GapDetector + FitWarning)**
 GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak match vises en advarsel med valget om å fortsette eller avbryte.
@@ -85,7 +85,7 @@ Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000
 
 ## Testing
 
-**Backend** — 43 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
+**Backend** — 45 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
 
 ```bash
 cd backend
