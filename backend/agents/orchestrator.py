@@ -19,7 +19,6 @@ DEFAULT_PLAN = {
     "fit_level": "medium",
     "fit_summary": "",
     "skip_gap_detector": False,
-    "critic_rounds": 1,
 }
 
 PLAN_TOOL = {
@@ -44,16 +43,8 @@ PLAN_TOOL = {
                 "type": "boolean",
                 "description": "Hopp over GapDetector — sett true kun ved 'strong' match.",
             },
-            "critic_rounds": {
-                "type": "integer",
-                "enum": [1, 2],
-                "description": (
-                    "Antall Critic-runder. 2 kun ved 'weak' eller tydelige gap "
-                    "som krever ekstra revisjon, ellers 1."
-                ),
-            },
         },
-        "required": ["fit_level", "fit_summary", "skip_gap_detector", "critic_rounds"],
+        "required": ["fit_level", "fit_summary", "skip_gap_detector"],
     },
 }
 

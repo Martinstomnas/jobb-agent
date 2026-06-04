@@ -27,8 +27,7 @@ def _patch_agents(monkeypatch, *, plan):
     monkeypatch.setattr(main, "gap_detector", AsyncMock(return_value=[]))
     monkeypatch.setattr(main, "writer", AsyncMock(return_value="UTKAST"))
     monkeypatch.setattr(main, "interview_prep", AsyncMock(return_value="INTERVJU"))
-    monkeypatch.setattr(main, "critic", AsyncMock(return_value="KRITIKK"))
-    monkeypatch.setattr(main, "writer_revise", AsyncMock(return_value="REVIDERT"))
+    monkeypatch.setattr(main, "validator", AsyncMock(return_value="Ingen avvik funnet."))
 
 
 def _events(response_text: str) -> list[dict]:
@@ -46,7 +45,6 @@ def test_happy_path_medium_match(monkeypatch):
         "fit_level": "medium",
         "fit_summary": "Grei match.",
         "skip_gap_detector": False,
-        "critic_rounds": 1,
     }
     _patch_agents(monkeypatch, plan=plan)
 
@@ -63,12 +61,12 @@ def test_happy_path_medium_match(monkeypatch):
     assert ("Orchestrator", "done") in agents_seen
     assert ("Writer", "done") in agents_seen
     assert ("InterviewPrep", "done") in agents_seen
-    assert ("Critic", "done") in agents_seen
+    assert ("Validator", "done") in agents_seen
     assert events[-1]["agent"] == "FERDIG"
 
-    # Writer-output skal være den reviderte versjonen, ikke utkastet.
+    # Writer-output skal være direkte fra Writer, ikke revidert.
     writer_done = next(e for e in events if e["agent"] == "Writer" and e["status"] == "done")
-    assert writer_done["content"] == "REVIDERT"
+    assert writer_done["content"] == "UTKAST"
 
     # Match skal trekke ut "Anbefalt vinkling".
     match_done = next(e for e in events if e["agent"] == "Match" and e["status"] == "done")
@@ -80,7 +78,6 @@ def test_strong_match_hopper_over_gap_detector(monkeypatch):
         "fit_level": "strong",
         "fit_summary": "Sterk match.",
         "skip_gap_detector": True,
-        "critic_rounds": 1,
     }
     _patch_agents(monkeypatch, plan=plan)
 
@@ -91,26 +88,6 @@ def test_strong_match_hopper_over_gap_detector(monkeypatch):
     # GapDetector skal ikke ha kjørt i det hele tatt.
     assert main.gap_detector.await_count == 0
     assert not any(e["agent"] == "GapDetector" for e in events)
-    assert events[-1]["agent"] == "FERDIG"
-
-
-def test_critic_rounds_clamp(monkeypatch):
-    # Orchestrator returnerer ugyldig høyt tall — guardrailen skal begrense til 2.
-    # Bruker "medium" så pipelinen ikke blokkerer på bekreftelse.
-    plan = {
-        "fit_level": "medium",
-        "fit_summary": "Grei.",
-        "skip_gap_detector": False,
-        "critic_rounds": 99,
-    }
-    _patch_agents(monkeypatch, plan=plan)
-
-    with TestClient(app) as client:
-        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
-        events = _events(res.text)
-
-    # critic skal ha kjørt maks 2 ganger til tross for critic_rounds=99.
-    assert main.critic.await_count == 2
     assert events[-1]["agent"] == "FERDIG"
 
 
@@ -168,7 +145,6 @@ async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
         "fit_level": "medium",
         "fit_summary": "",
         "skip_gap_detector": False,
-        "critic_rounds": 1,
     }
     _patch_agents(monkeypatch, plan=plan)
     monkeypatch.setattr(
@@ -198,7 +174,6 @@ async def test_weak_match_fortsett_kjorer_videre(monkeypatch):
         "fit_level": "weak",
         "fit_summary": "Svak match.",
         "skip_gap_detector": False,
-        "critic_rounds": 1,
     }
     _patch_agents(monkeypatch, plan=plan)
 
@@ -220,7 +195,6 @@ async def test_weak_match_avbryt_stopper_pipelinen(monkeypatch):
         "fit_level": "weak",
         "fit_summary": "Svak match.",
         "skip_gap_detector": False,
-        "critic_rounds": 1,
     }
     _patch_agents(monkeypatch, plan=plan)
 

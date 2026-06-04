@@ -13,7 +13,6 @@ async def test_gyldig_plan_returneres(monkeypatch):
         "fit_level": "strong",
         "fit_summary": "Sterk match.",
         "skip_gap_detector": True,
-        "critic_rounds": 1,
     }
     monkeypatch.setattr(orch, "llm_tool", AsyncMock(return_value=plan))
     result = await orch.orchestrator("krav", "match")
@@ -28,7 +27,6 @@ async def test_delvis_plan_fylles_med_defaults(monkeypatch):
     result = await orch.orchestrator("krav", "match")
     assert result["fit_level"] == "weak"
     assert result["skip_gap_detector"] is False
-    assert result["critic_rounds"] == 1
     assert result["fit_summary"] == ""
 
 

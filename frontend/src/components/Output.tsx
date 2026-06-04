@@ -28,9 +28,10 @@ interface OutputProps {
   vinklingOutput: string | null;
   sources: ResearchSource[] | null;
   interviewPrep: string | null;
+  validation: string | null;
 }
 
-export default function Output({ content, running, vinklingOutput, sources, interviewPrep }: OutputProps) {
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation }: OutputProps) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -78,6 +79,15 @@ export default function Output({ content, running, vinklingOutput, sources, inte
       <div className="output-content">
         <ReactMarkdown>{content!}</ReactMarkdown>
       </div>
+
+      {validation && (
+        <Collapsible
+          label="Faktasjekk"
+          count={validation.includes("Ingen avvik funnet") ? "ok" : "funn"}
+        >
+          <ReactMarkdown>{validation}</ReactMarkdown>
+        </Collapsible>
+      )}
 
       {interviewPrep && (
         <Collapsible label="Intervjuforberedelse">

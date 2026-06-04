@@ -19,8 +19,8 @@ from agents.kravleser import kravleser
 from agents.research import research
 from agents.match import match
 from agents.gap_detector import gap_detector
-from agents.writer import writer, writer_revise
-from agents.critic import critic
+from agents.writer import writer
+from agents.validator import validator
 from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
 
@@ -208,7 +208,7 @@ async def analyze(input: JobInput):
             yield event("Writer", "running")
             yield event("InterviewPrep", "running")
 
-            writer_draft, interview_result = await asyncio.gather(
+            writer_result, interview_result = await asyncio.gather(
                 writer(
                     krav_result,
                     research_text,
@@ -225,22 +225,15 @@ async def analyze(input: JobInput):
 
             active.difference_update({"Writer", "InterviewPrep"})
             yield event("InterviewPrep", "done", interview_result)
-
-            # Critic: antall runder bestemt av orchestrator
-            try:
-                critic_rounds = max(1, min(2, int(plan.get("critic_rounds", 1) or 1)))
-            except (TypeError, ValueError):
-                critic_rounds = 1
-            writer_result = writer_draft
-            for _ in range(critic_rounds):
-                active.add("Critic")
-                yield event("Critic", "running")
-                critique = await critic(writer_result, krav_result, match_result, input.cv)
-                writer_result = await writer_revise(writer_result, critique)
-                active.discard("Critic")
-                yield event("Critic", "done")
-
             yield event("Writer", "done", writer_result)
+
+            # Validator: faktasjekk Writer-output mot CV og research
+            active.add("Validator")
+            yield event("Validator", "running")
+            validation = await validator(writer_result, input.cv, krav_result, research_text)
+            active.discard("Validator")
+            yield event("Validator", "done", validation)
+
             yield event("FERDIG", "done")
 
         except Exception as e:

@@ -69,23 +69,3 @@ Hva avslutningen bør inneholde konkret i denne konteksten. Unngå generiske rå
 2–3 konkrete ting som ville svekket søknaden i denne spesifikke konteksten.
 """
     return await llm(SYSTEM, prompt, max_tokens=1500)
-
-
-async def writer_revise(draft: str, critique: str) -> str:
-    prompt = f"""
-Her er et utkast til søknadsdisposisjon:
-
-{draft}
-
----
-
-En kritisk redaktør har gitt følgende tilbakemelding:
-
-{critique}
-
----
-
-Lever en forbedret versjon av disposisjonen som adresserer kritikken.
-Behold strukturen og det som allerede fungerer bra.
-"""
-    return await llm(SYSTEM, prompt, max_tokens=1500)

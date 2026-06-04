@@ -8,7 +8,7 @@ const descriptions: Record<string, string> = {
   GapDetector: "Avklarer hull i profilen",
   Writer: "Lager søknadsdisposisjon",
   InterviewPrep: "Forbereder intervju",
-  Critic: "Evaluerer og forbedrer utkastet",
+  Validator: "Faktasjekker mot CV og research",
 };
 
 interface AgentPipelineProps {

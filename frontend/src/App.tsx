@@ -17,7 +17,7 @@ const AGENTS = [
   "GapDetector",
   "Writer",
   "InterviewPrep",
-  "Critic",
+  "Validator",
 ];
 
 interface PendingQuestion {
@@ -44,6 +44,7 @@ export default function App() {
     ResearchSource[] | null
   >(null);
   const [interviewPrep, setInterviewPrep] = useState<string | null>(null);
+  const [validation, setValidation] = useState<string | null>(null);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const handleSubmit = async ({
@@ -58,6 +59,7 @@ export default function App() {
     setPendingQuestion(null);
     setFitWarning(null);
     setPipelineError(null);
+    setValidation(null);
 
     try {
       const res = await fetch(`${API_URL}/analyze`, {
@@ -158,6 +160,9 @@ export default function App() {
             if (msg.agent === "InterviewPrep" && msg.status === "done") {
               setInterviewPrep(msg.content);
             }
+            if (msg.agent === "Validator" && msg.status === "done") {
+              setValidation(msg.content);
+            }
           } catch {
             // ufullstendig chunk, ignorer
           }
@@ -213,6 +218,7 @@ export default function App() {
             vinklingOutput={vinklingOutput}
             sources={researchSources}
             interviewPrep={interviewPrep}
+            validation={validation}
           />
         </div>
       </main>

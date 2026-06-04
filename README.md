@@ -17,14 +17,11 @@ FastAPI /analyze
     ├── Orchestrator   – vurderer fit og bestemmer pipeline-strategi:
     │     · "weak"   → advar bruker, vent på bekreftelse før videre
     │     · "strong" → hopp over GapDetector
-    │     · svak match → kjør Critic to runder istedenfor én
     ├── GapDetector    – stiller 0–3 oppfølgingsspørsmål (hoppes over ved sterk match)
     ├── Writer + InterviewPrep    (parallelt)
-    │     Writer:        lager søknadsdisposisjon (utkast)
+    │     Writer:        lager søknadsdisposisjon
     │     InterviewPrep: lager intervjuforberedelse
-    ├── Critic         – evaluerer Writer-utkastet mot krav og match-analyse
-    └── Writer revise  – forbedrer disposisjonen basert på kritikken
-                         (kjøres 1–2 ganger avhengig av orchestrator-plan)
+    └── Validator      – faktasjekker Writer-output mot CV og research
 ```
 
 Resultater streames til frontend fortløpende via SSE.
@@ -40,7 +37,7 @@ Resultater streames til frontend fortløpende via SSE.
 | GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                     |
 | Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning               |
 | InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
-| Critic        | Evaluerer Writer-utkastet — identifiserer svakheter og mangler           |
+| Validator     | Faktasjekker Writer-output — flaggerer påstander uforankret i CV         |
 
 ## Agentiske mønstre
 
@@ -48,10 +45,9 @@ Resultater streames til frontend fortløpende via SSE.
 Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
 - Svak match → pauser og ber brukeren bekrefte før analysen fortsetter
 - Sterk match → hopper over GapDetector
-- Svake kandidater får to runder med Critic i stedet for én
 
-**Self-reflection (Critic + Writer revise)**
-Writer og InterviewPrep kjøres parallelt. Deretter evaluerer Critic Writer-utkastet mot kravene. Writer reviderer basert på kritikken. Brukeren mottar kun den forbedrede versjonen.
+**Faktaforankring (Validator)**
+Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV og research — flagger påstander som ikke kan spores til kildematerialet. Brukeren ser funnene under disposisjonen.
 
 **Human-in-the-loop (GapDetector + FitWarning)**
 GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak match vises en advarsel med valget om å fortsette eller avbryte.
