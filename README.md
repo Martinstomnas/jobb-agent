@@ -85,8 +85,7 @@ Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000
 
 ## Testing
 
-25 tester som dekker parsing, input-validering og pipeline-orkestrering.
-LLM-kall mockes, så hele suiten kjører på under ett sekund uten API-kost.
+**Backend** — 43 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
 
 ```bash
 cd backend
@@ -94,9 +93,22 @@ pytest
 ```
 
 - **Unit:** GapDetector-parsing, Orchestrator-fallback, input-validatorer
+- **Agent:** alle agenter (Kravleser, Writer, InterviewPrep, Validator, Research) — prompt-innhold, parametere og returverdier
 - **Endepunkt:** PDF-opplasting (filtype, størrelse, korrupt fil)
 - **Integrasjon:** hele `/analyze`-flyten — event-sekvens, adaptiv pipeline,
   guardrails, og de blokkerende human-in-the-loop-grenene (svar via `/answer`)
+
+**Frontend** — 18 tester med Vitest + React Testing Library.
+
+```bash
+cd frontend
+npm test
+```
+
+- **InputForm:** innsending blokkert på tomme felt, tilleggsinfo kombineres i CV, deaktivert under kjøring
+- **FitWarning:** viser oppsummering, poster "avbryt"/"fortsett" til riktig endepunkt
+- **FollowUpQuestion:** send-knapp deaktivert på tom input, poster svar og hopp-over
+- **AgentPipeline:** agentnavn, fremgangsteller, CSS-klasser og statusikonet per status
 
 ## CV-input
 
