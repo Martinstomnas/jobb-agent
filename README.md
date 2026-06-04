@@ -29,7 +29,7 @@ Resultater streames til frontend fortløpende via SSE.
 ## Agenter
 
 | Agent         | Ansvar                                                                   |
-|---------------|--------------------------------------------------------------------------|
+| ------------- | ------------------------------------------------------------------------ |
 | Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                      |
 | Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                   |
 | Match         | Sterke matcher, gap og anbefalt posisjonering (brukes internt av Writer) |
@@ -43,6 +43,7 @@ Resultater streames til frontend fortløpende via SSE.
 
 **Dynamisk pipeline (Orchestrator)**
 Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
+
 - Svak match → pauser og ber brukeren bekrefte før analysen fortsetter
 - Sterk match → hopper over GapDetector
 
@@ -57,12 +58,14 @@ GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak
 Over disposisjonen vises **Anbefalt vinkling** — én setning om hvordan kandidaten bør posisjonere seg.
 
 Under disposisjonen er to sammenleggbare seksjoner:
+
 - **Intervjuforberedelse** — spørsmål og svar-strategi
 - **Søkelogg** — websøk Research-agenten utførte
 
 ## Oppsett
 
 **Backend**
+
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -71,6 +74,7 @@ uvicorn main:app --reload
 ```
 
 **Frontend**
+
 ```bash
 cd frontend
 npm install
@@ -94,19 +98,16 @@ pytest
 - **Integrasjon:** hele `/analyze`-flyten — event-sekvens, adaptiv pipeline,
   guardrails, og de blokkerende human-in-the-loop-grenene (svar via `/answer`)
 
-AI-*kvalitet* (relevans, faktuell forankring) hører hjemme i en egen
-eval-suite — bevisst utenfor denne deterministiske testpakken.
-
 ## CV-input
 
 CV kan limes inn som tekst eller lastes opp som PDF (tekst-basert PDF — ikke skannede bilder).
 
 ## Tech-stack
 
-| Del      | Teknologi                                     |
-|----------|-----------------------------------------------|
-| Backend  | Python, FastAPI, Anthropic Claude API         |
-| Frontend | React 19, TypeScript, Vite                    |
-| Streaming| Server-Sent Events (SSE)                      |
-| PDF      | PyMuPDF                                       |
-| LLM      | Claude Haiku 4.5                              |
+| Del       | Teknologi                             |
+| --------- | ------------------------------------- |
+| Backend   | Python, FastAPI, Anthropic Claude API |
+| Frontend  | React 19, TypeScript, Vite            |
+| Streaming | Server-Sent Events (SSE)              |
+| PDF       | PyMuPDF                               |
+| LLM       | Claude Haiku 4.5                      |
