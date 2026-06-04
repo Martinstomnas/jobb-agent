@@ -8,9 +8,6 @@ import "./App.css";
 
 import type { AgentStates, ResearchSource } from "./types";
 import { API_URL } from "./config";
-import { DUMMY_EVENTS } from "./dummyData";
-
-const IS_DEV = import.meta.env.DEV;
 
 const AGENTS = [
   "Kravleser",
@@ -47,7 +44,6 @@ export default function App() {
   const [validation, setValidation] = useState<string | null>(null);
   const [agentLog, setAgentLog] = useState<Record<string, string>>({});
   const [pipelineError, setPipelineError] = useState<string | null>(null);
-  const [devMode, setDevMode] = useState(false);
 
   // Nav status helpers
   const runningAgent = AGENTS.find((a) => agentStates[a]?.status === "running");
@@ -116,14 +112,6 @@ export default function App() {
     };
 
     try {
-      if (IS_DEV && devMode) {
-        for (const { _delay = 400, ...msg } of DUMMY_EVENTS) {
-          if (_delay > 0) await new Promise((r) => setTimeout(r, _delay));
-          processEvent(msg);
-        }
-        return;
-      }
-
       const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,12 +178,6 @@ export default function App() {
               <span className="nav-status-text">multi-agent system</span>
             )}
           </div>
-          <button
-            className={`dev-toggle${devMode ? " dev-toggle-active" : ""}`}
-            onClick={() => setDevMode((d) => !d)}
-          >
-            dummy {devMode ? "på" : "av"}
-          </button>
         </div>
       </nav>
 
