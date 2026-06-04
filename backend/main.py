@@ -211,7 +211,7 @@ async def analyze(request: Request, input: JobInput):
             if not plan.get("skip_gap_detector"):
                 active.add("GapDetector")
                 yield event("GapDetector", "running")
-                questions = await gap_detector(research_text, input.cv)
+                questions = await gap_detector(research_text, input.cv, krav_result)
                 collected_answers = []
                 for question in questions:
                     yield event("GapDetector", "question", question, session_id=session_id)

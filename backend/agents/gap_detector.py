@@ -13,18 +13,19 @@ Still kun spørsmål om gap som er vesentlige for stillingen.
 """
 
 
-async def gap_detector(research: str, cv: str) -> list[str]:
+async def gap_detector(research: str, cv: str, krav: str = "") -> list[str]:
     """
-    Returnerer 0–3 oppfølgingsspørsmål basert på domenegap mellom Research og CV.
+    Returnerer 0–3 oppfølgingsspørsmål basert på domenegap mellom krav/research og CV.
     """
+    krav_section = f"\nKrav fra stillingen:\n{krav}\n" if krav else ""
     prompt = f"""
 Research om selskapet:
 {research}
-
+{krav_section}
 Kandidatens CV:
 {cv}
 
-Finn de viktigste domenene/bransjene selskapet jobber i som kandidaten IKKE har nevnt i CV-en.
+Finn krav eller domener som er vesentlige for stillingen, men som kandidaten IKKE har nevnt i CV-en.
 For hvert vesentlig gap (maks 3): skriv ett spørsmål, ett per linje.
 Bare spørsmål som faktisk vil berike søknaden.
 Eksempel: "Jeg fant at de jobber mye med energisektoren – har du noen erfaring derfra?"

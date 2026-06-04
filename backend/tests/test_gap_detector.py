@@ -10,7 +10,7 @@ from agents import gap_detector as gd
 
 async def _run_with_llm_output(monkeypatch, text: str):
     monkeypatch.setattr(gd, "llm", AsyncMock(return_value=text))
-    return await gd.gap_detector("research", "cv")
+    return await gd.gap_detector("research", "cv", "krav")
 
 
 async def test_ingen_gir_tom_liste(monkeypatch):
@@ -47,3 +47,18 @@ async def test_for_lange_linjer_filtreres_bort(monkeypatch):
 async def test_blanke_linjer_ignoreres(monkeypatch):
     out = await _run_with_llm_output(monkeypatch, "\n\nSpørsmål?\n\n")
     assert out == ["Spørsmål?"]
+
+
+async def test_krav_inkluderes_i_prompt(monkeypatch):
+    mock_llm = AsyncMock(return_value="INGEN")
+    monkeypatch.setattr(gd, "llm", mock_llm)
+    await gd.gap_detector("research", "cv", krav="Python og ML-erfaring")
+    prompt_arg = mock_llm.call_args[0][1]
+    assert "Python og ML-erfaring" in prompt_arg
+
+
+async def test_uten_krav_fungerer_fortsatt(monkeypatch):
+    mock_llm = AsyncMock(return_value="INGEN")
+    monkeypatch.setattr(gd, "llm", mock_llm)
+    result = await gd.gap_detector("research", "cv")
+    assert result == []
