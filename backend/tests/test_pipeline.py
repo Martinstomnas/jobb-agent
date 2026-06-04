@@ -73,6 +73,38 @@ def test_happy_path_medium_match(monkeypatch):
     assert "Vinkle slik." in match_done["content"]
 
 
+def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
+    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    _patch_agents(monkeypatch, plan=plan)
+    monkeypatch.setattr(main, "research", AsyncMock(side_effect=RuntimeError("API nede")))
+
+    with TestClient(app) as client:
+        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
+        events = _events(res.text)
+
+    agents_seen = {(e["agent"], e["status"]) for e in events}
+    assert ("Research", "error") in agents_seen
+    assert ("Kravleser", "error") not in agents_seen
+    assert ("Kravleser", "done") in agents_seen
+    assert events[-1]["agent"] == "FERDIG"
+
+
+def test_writer_feil_markerer_kun_writer_som_feilet(monkeypatch):
+    plan = {"fit_level": "strong", "fit_summary": "", "skip_gap_detector": True}
+    _patch_agents(monkeypatch, plan=plan)
+    monkeypatch.setattr(main, "writer", AsyncMock(side_effect=RuntimeError("Timeout")))
+
+    with TestClient(app) as client:
+        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
+        events = _events(res.text)
+
+    agents_seen = {(e["agent"], e["status"]) for e in events}
+    assert ("Writer", "error") in agents_seen
+    assert ("InterviewPrep", "error") not in agents_seen
+    assert ("InterviewPrep", "done") in agents_seen
+    assert events[-1]["agent"] == "FERDIG"
+
+
 def test_match_vinkling_robust_mot_omformulert_overskrift(monkeypatch):
     plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
     _patch_agents(monkeypatch, plan=plan)

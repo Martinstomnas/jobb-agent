@@ -164,14 +164,30 @@ async def analyze(request: Request, input: JobInput):
             yield event("Kravleser", "running")
             yield event("Research", "running")
 
-            krav_result, (research_text, research_sources) = await asyncio.gather(
+            krav_or_exc, research_or_exc = await asyncio.gather(
                 kravleser(input.job_posting),
                 research(input.job_posting),
+                return_exceptions=True,
             )
-
             active.difference_update({"Kravleser", "Research"})
-            yield event("Kravleser", "done", krav_result)
-            yield event("Research", "done", research_text, sources=research_sources)
+
+            if isinstance(krav_or_exc, BaseException):
+                logger.error("Kravleser feilet", exc_info=krav_or_exc)
+                yield event("Kravleser", "error", "En uventet feil oppstod. Prøv igjen.")
+            else:
+                krav_result = krav_or_exc
+                yield event("Kravleser", "done", krav_result)
+
+            if isinstance(research_or_exc, BaseException):
+                logger.error("Research feilet", exc_info=research_or_exc)
+                yield event("Research", "error", "En uventet feil oppstod. Prøv igjen.")
+            else:
+                research_text, research_sources = research_or_exc
+                yield event("Research", "done", research_text, sources=research_sources)
+
+            if isinstance(krav_or_exc, BaseException) or isinstance(research_or_exc, BaseException):
+                yield event("FERDIG", "done")
+                return
 
             # Match
             active.add("Match")
@@ -232,7 +248,7 @@ async def analyze(request: Request, input: JobInput):
             yield event("Writer", "running")
             yield event("InterviewPrep", "running")
 
-            writer_result, interview_result = await asyncio.gather(
+            writer_or_exc, interview_or_exc = await asyncio.gather(
                 writer(
                     krav_result,
                     research_text,
@@ -245,11 +261,26 @@ async def analyze(request: Request, input: JobInput):
                     match_result,
                     extra_context=extra_context,
                 ),
+                return_exceptions=True,
             )
-
             active.difference_update({"Writer", "InterviewPrep"})
-            yield event("InterviewPrep", "done", interview_result)
-            yield event("Writer", "done", writer_result)
+
+            if isinstance(writer_or_exc, BaseException):
+                logger.error("Writer feilet", exc_info=writer_or_exc)
+                yield event("Writer", "error", "En uventet feil oppstod. Prøv igjen.")
+            else:
+                writer_result = writer_or_exc
+                yield event("Writer", "done", writer_result)
+
+            if isinstance(interview_or_exc, BaseException):
+                logger.error("InterviewPrep feilet", exc_info=interview_or_exc)
+                yield event("InterviewPrep", "error", "En uventet feil oppstod. Prøv igjen.")
+            else:
+                yield event("InterviewPrep", "done", interview_or_exc)
+
+            if isinstance(writer_or_exc, BaseException) or isinstance(interview_or_exc, BaseException):
+                yield event("FERDIG", "done")
+                return
 
             # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang)
             draft = writer_result
