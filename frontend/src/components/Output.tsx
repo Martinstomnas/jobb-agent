@@ -6,10 +6,11 @@ interface CollapsibleProps {
   label: string;
   count?: string | null;
   children: React.ReactNode;
+  defaultOpen?: boolean;
 }
 
-function Collapsible({ label, count, children }: CollapsibleProps) {
-  const [open, setOpen] = useState(false);
+function Collapsible({ label, count, children, defaultOpen = false }: CollapsibleProps) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="sources-section">
       <button className="sources-toggle" onClick={() => setOpen((o) => !o)}>
@@ -22,6 +23,50 @@ function Collapsible({ label, count, children }: CollapsibleProps) {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) return;
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore copy failures (e.g. permissions)
+    }
+  };
+
+  return (
+    <div className="copy-icon-wrap">
+      <button
+        className="copy-icon-btn"
+        onClick={handleCopy}
+        data-tooltip={copied ? "Kopiert!" : "Kopier"}
+      >
+        {copied ? (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
+const LOG_ORDER = ["Kravleser", "Research", "Match", "Orchestrator"] as const;
+const LOG_LABELS: Record<string, string> = {
+  Kravleser: "Kravleser — ekstraherte krav",
+  Research: "Research — selskapsinfo",
+  Match: "Match — full analyse",
+  Orchestrator: "Orchestrator — pipeline-plan",
+};
+
 interface OutputProps {
   content: string | null;
   running: boolean;
@@ -29,9 +74,10 @@ interface OutputProps {
   sources: ResearchSource[] | null;
   interviewPrep: string | null;
   validation: string | null;
+  agentLog: Record<string, string>;
 }
 
-export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation }: OutputProps) {
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation, agentLog }: OutputProps) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -55,20 +101,6 @@ export default function Output({ content, running, vinklingOutput, sources, inte
 
   return (
     <div className="output">
-      <div className="output-header">
-        {running ? (
-          <span className="output-done-badge" style={{ color: "var(--running)", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span className="spinner" />
-            Oppdaterer...
-          </span>
-        ) : (
-          <span className="output-done-badge">Søknadsdisposisjon</span>
-        )}
-        <button className="copy-btn" onClick={() => navigator.clipboard.writeText(content!)}>
-          Kopier
-        </button>
-      </div>
-
       {vinklingOutput && (
         <div className="vinkling-callout">
           <span className="vinkling-label">Anbefalt vinkling</span>
@@ -76,9 +108,17 @@ export default function Output({ content, running, vinklingOutput, sources, inte
         </div>
       )}
 
-      <div className="output-content">
+      <Collapsible label="Søknadsdisposisjon" defaultOpen>
         <ReactMarkdown>{content!}</ReactMarkdown>
-      </div>
+        <CopyButton text={content!} />
+      </Collapsible>
+
+      {interviewPrep && (
+        <Collapsible label="Intervjuforberedelse">
+          <ReactMarkdown>{interviewPrep}</ReactMarkdown>
+          <CopyButton text={interviewPrep} />
+        </Collapsible>
+      )}
 
       {validation && (
         <Collapsible
@@ -86,12 +126,6 @@ export default function Output({ content, running, vinklingOutput, sources, inte
           count={validation.includes("Ingen avvik funnet") ? "ok" : "funn"}
         >
           <ReactMarkdown>{validation}</ReactMarkdown>
-        </Collapsible>
-      )}
-
-      {interviewPrep && (
-        <Collapsible label="Intervjuforberedelse">
-          <ReactMarkdown>{interviewPrep}</ReactMarkdown>
         </Collapsible>
       )}
 
@@ -108,6 +142,17 @@ export default function Output({ content, running, vinklingOutput, sources, inte
                   </li>
                 ))}
               </ul>
+            </div>
+          ))}
+        </Collapsible>
+      )}
+
+      {LOG_ORDER.some(a => agentLog[a]) && (
+        <Collapsible label="Agentlogg" count={`${LOG_ORDER.filter(a => agentLog[a]).length} agenter`}>
+          {LOG_ORDER.filter(a => agentLog[a]).map(agent => (
+            <div key={agent} className="log-entry">
+              <div className="log-agent-label">{LOG_LABELS[agent]}</div>
+              <ReactMarkdown>{agentLog[agent]}</ReactMarkdown>
             </div>
           ))}
         </Collapsible>

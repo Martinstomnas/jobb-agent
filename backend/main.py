@@ -162,14 +162,20 @@ async def analyze(input: JobInput):
                 r"## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL
             )
             vinkling = _vm.group(1).strip() if _vm else ""
-            yield event("Match", "done", vinkling)
+            yield event("Match", "done", vinkling, full_match=match_result)
 
             # Orchestrator: bestem pipeline-strategi
             active.add("Orchestrator")
             yield event("Orchestrator", "running")
             plan = await orchestrator(krav_result, match_result)
             active.discard("Orchestrator")
-            yield event("Orchestrator", "done", plan.get("fit_summary", ""))
+            yield event(
+                "Orchestrator",
+                "done",
+                plan.get("fit_summary", ""),
+                fit_level=plan.get("fit_level"),
+                skip_gap_detector=plan.get("skip_gap_detector"),
+            )
 
             # Advar brukeren ved svak match og vent på bekreftelse
             if plan.get("fit_level") == "weak":

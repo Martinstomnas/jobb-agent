@@ -8,6 +8,9 @@ import "./App.css";
 
 import type { AgentStates, ResearchSource } from "./types";
 import { API_URL } from "./config";
+import { DUMMY_EVENTS } from "./dummyData";
+
+const IS_DEV = import.meta.env.DEV;
 
 const AGENTS = [
   "Kravleser",
@@ -37,15 +40,19 @@ export default function App() {
   const [output, setOutput] = useState<string | null>(null);
   const [vinklingOutput, setVinklingOutput] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [pendingQuestion, setPendingQuestion] =
-    useState<PendingQuestion | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
   const [fitWarning, setFitWarning] = useState<FitWarningState | null>(null);
-  const [researchSources, setResearchSources] = useState<
-    ResearchSource[] | null
-  >(null);
+  const [researchSources, setResearchSources] = useState<ResearchSource[] | null>(null);
   const [interviewPrep, setInterviewPrep] = useState<string | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
+  const [agentLog, setAgentLog] = useState<Record<string, string>>({});
   const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [devMode, setDevMode] = useState(false);
+
+  // Nav status helpers
+  const runningAgent = AGENTS.find((a) => agentStates[a]?.status === "running");
+  const doneCount = AGENTS.filter((a) => agentStates[a]?.status === "done").length;
+  const isDone = !running && output !== null;
 
   const handleSubmit = async ({
     jobPosting,
@@ -60,8 +67,63 @@ export default function App() {
     setFitWarning(null);
     setPipelineError(null);
     setValidation(null);
+    setAgentLog({});
+    setOutput(null);
+    setVinklingOutput(null);
+    setResearchSources(null);
+    setInterviewPrep(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processEvent = (msg: Record<string, any>) => {
+      if (msg.agent === "FERDIG") { setRunning(false); return; }
+
+      if (msg.agent === "Orchestrator" && msg.status === "warning") {
+        setFitWarning({ summary: msg.content, sessionId: msg.session_id, key: Date.now() });
+        setAgentStates((prev) => ({ ...prev, Orchestrator: { status: "warning", content: msg.content } }));
+        return;
+      }
+      if (msg.agent === "Orchestrator" && msg.status === "done") {
+        setFitWarning(null);
+        const fitLabel: Record<string, string> = { strong: "Sterk", medium: "Medium", weak: "Svak" };
+        const logEntry = [
+          `**Fit-nivå:** ${fitLabel[msg.fit_level] ?? msg.fit_level}`,
+          `**Hopp over GapDetector:** ${msg.skip_gap_detector ? "ja" : "nei"}`,
+          `**Sammendrag:** ${msg.content}`,
+        ].join("\n\n");
+        setAgentLog((prev) => ({ ...prev, Orchestrator: logEntry }));
+      }
+      if (msg.agent === "GapDetector" && msg.status === "question") {
+        setPendingQuestion({ question: msg.content, sessionId: msg.session_id, key: Date.now() });
+        setAgentStates((prev) => ({ ...prev, GapDetector: { status: "question", content: msg.content } }));
+        return;
+      }
+      if (msg.agent === "GapDetector" && msg.status === "answered") {
+        setPendingQuestion(null);
+        setAgentStates((prev) => ({ ...prev, GapDetector: { status: "done", content: msg.content || "Hoppet over" } }));
+        return;
+      }
+
+      setAgentStates((prev) => ({ ...prev, [msg.agent]: { status: msg.status, content: msg.content } }));
+
+      if (msg.agent === "Research" && msg.status === "done" && msg.sources) setResearchSources(msg.sources);
+      if (msg.agent === "Match" && msg.status === "done") setVinklingOutput(msg.content);
+      if (msg.agent === "Writer" && msg.status === "done") setOutput(msg.content);
+      if (msg.agent === "InterviewPrep" && msg.status === "done") setInterviewPrep(msg.content);
+      if (msg.agent === "Kravleser" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Kravleser: msg.content }));
+      if (msg.agent === "Research" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Research: msg.content }));
+      if (msg.agent === "Match" && msg.status === "done" && msg.full_match) setAgentLog((prev) => ({ ...prev, Match: msg.full_match }));
+      if (msg.agent === "Validator" && msg.status === "done") setValidation(msg.content);
+    };
 
     try {
+      if (IS_DEV && devMode) {
+        for (const { _delay = 400, ...msg } of DUMMY_EVENTS) {
+          if (_delay > 0) await new Promise((r) => setTimeout(r, _delay));
+          processEvent(msg);
+        }
+        return;
+      }
+
       const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,81 +150,8 @@ export default function App() {
           if (!line.startsWith("data:")) continue;
           const raw = line.slice(5).trim();
           if (!raw) continue;
-
           try {
-            const msg = JSON.parse(raw);
-
-            if (msg.agent === "FERDIG") {
-              setRunning(false);
-              continue;
-            }
-
-            if (msg.agent === "Orchestrator" && msg.status === "warning") {
-              setFitWarning({
-                summary: msg.content,
-                sessionId: msg.session_id,
-                key: Date.now(),
-              });
-              setAgentStates((prev) => ({
-                ...prev,
-                Orchestrator: { status: "warning", content: msg.content },
-              }));
-              continue;
-            }
-
-            if (msg.agent === "Orchestrator" && msg.status === "done") {
-              setFitWarning(null);
-            }
-
-            if (msg.agent === "GapDetector" && msg.status === "question") {
-              setPendingQuestion({
-                question: msg.content,
-                sessionId: msg.session_id,
-                key: Date.now(),
-              });
-              setAgentStates((prev) => ({
-                ...prev,
-                GapDetector: { status: "question", content: msg.content },
-              }));
-              continue;
-            }
-
-            if (msg.agent === "GapDetector" && msg.status === "answered") {
-              setPendingQuestion(null);
-              setAgentStates((prev) => ({
-                ...prev,
-                GapDetector: {
-                  status: "done",
-                  content: msg.content || "Hoppet over",
-                },
-              }));
-              continue;
-            }
-
-            setAgentStates((prev) => ({
-              ...prev,
-              [msg.agent]: { status: msg.status, content: msg.content },
-            }));
-
-            if (
-              msg.agent === "Research" &&
-              msg.status === "done" &&
-              msg.sources
-            ) {
-              setResearchSources(msg.sources);
-            }
-            if (msg.agent === "Match" && msg.status === "done") {
-              setVinklingOutput(msg.content);
-            }
-            if (msg.agent === "Writer" && msg.status === "done") {
-              setOutput(msg.content);
-            }
-            if (msg.agent === "InterviewPrep" && msg.status === "done") {
-              setInterviewPrep(msg.content);
-            }
-            if (msg.agent === "Validator" && msg.status === "done") {
-              setValidation(msg.content);
-            }
+            processEvent(JSON.parse(raw));
           } catch {
             // ufullstendig chunk, ignorer
           }
@@ -176,52 +165,82 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-tag">multi-agent system</div>
-        <h1>
+      {/* ── Dark nav ── */}
+      <nav className="app-nav">
+        <span className="nav-brand">
           Jobbsøker<span className="accent">.</span>
-        </h1>
-        <p className="subtitle">Lim inn annonse og CV – agentene gjør resten</p>
-      </header>
+        </span>
+        <div className="nav-right">
+          <div className="nav-status">
+            {running && runningAgent ? (
+              <>
+                <span className="nav-dot nav-dot--running" />
+                <span className="nav-status-text">
+                  kjører · {runningAgent.toLowerCase()}
+                </span>
+              </>
+            ) : isDone ? (
+              <>
+                <span className="nav-dot nav-dot--done" />
+                <span className="nav-status-text">
+                  ferdig · {doneCount}/{AGENTS.length}
+                </span>
+              </>
+            ) : (
+              <span className="nav-status-text">multi-agent system</span>
+            )}
+          </div>
+          <button
+            className={`dev-toggle${devMode ? " dev-toggle-active" : ""}`}
+            onClick={() => setDevMode((d) => !d)}
+          >
+            dummy {devMode ? "på" : "av"}
+          </button>
+        </div>
+      </nav>
 
-      <main className="app-main">
-        <div className="left-col">
-          <InputForm onSubmit={handleSubmit} running={running} />
-          {pipelineError && (
-            <div className="pipeline-error">
-              <span className="pipeline-error-label">Feil</span>
-              <p>{pipelineError}</p>
-            </div>
-          )}
-          {fitWarning && (
-            <FitWarning
-              key={fitWarning.key}
-              summary={fitWarning.summary}
-              sessionId={fitWarning.sessionId}
+      {/* ── Main content ── */}
+      <div className="app-content">
+        <main className="app-main">
+          <div className="left-col">
+            <InputForm onSubmit={handleSubmit} running={running} />
+            {pipelineError && (
+              <div className="pipeline-error">
+                <span className="pipeline-error-label">Feil</span>
+                <p>{pipelineError}</p>
+              </div>
+            )}
+            {fitWarning && (
+              <FitWarning
+                key={fitWarning.key}
+                summary={fitWarning.summary}
+                sessionId={fitWarning.sessionId}
+              />
+            )}
+            {pendingQuestion && (
+              <FollowUpQuestion
+                key={pendingQuestion.key}
+                question={pendingQuestion.question}
+                sessionId={pendingQuestion.sessionId}
+              />
+            )}
+          </div>
+          <div className="right-col">
+            <AgentPipeline agents={AGENTS} states={agentStates} />
+          </div>
+          <div className="output-row">
+            <Output
+              content={output}
+              running={running}
+              vinklingOutput={vinklingOutput}
+              sources={researchSources}
+              interviewPrep={interviewPrep}
+              validation={validation}
+              agentLog={agentLog}
             />
-          )}
-          {pendingQuestion && (
-            <FollowUpQuestion
-              key={pendingQuestion.key}
-              question={pendingQuestion.question}
-              sessionId={pendingQuestion.sessionId}
-            />
-          )}
-        </div>
-        <div className="right-col">
-          <AgentPipeline agents={AGENTS} states={agentStates} />
-        </div>
-        <div className="output-row">
-          <Output
-            content={output}
-            running={running}
-            vinklingOutput={vinklingOutput}
-            sources={researchSources}
-            interviewPrep={interviewPrep}
-            validation={validation}
-          />
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
