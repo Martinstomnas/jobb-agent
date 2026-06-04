@@ -45,6 +45,7 @@ export default function App() {
   >(null);
   const [interviewPrep, setInterviewPrep] = useState<string | null>(null);
   const [validation, setValidation] = useState<string | null>(null);
+  const [agentLog, setAgentLog] = useState<Record<string, string>>({});
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   const handleSubmit = async ({
@@ -60,6 +61,7 @@ export default function App() {
     setFitWarning(null);
     setPipelineError(null);
     setValidation(null);
+    setAgentLog({});
 
     try {
       const res = await fetch(`${API_URL}/analyze`, {
@@ -112,6 +114,13 @@ export default function App() {
 
             if (msg.agent === "Orchestrator" && msg.status === "done") {
               setFitWarning(null);
+              const fitLabel: Record<string, string> = { strong: "Sterk", medium: "Medium", weak: "Svak" };
+              const logEntry = [
+                `**Fit-nivå:** ${fitLabel[msg.fit_level] ?? msg.fit_level}`,
+                `**Hopp over GapDetector:** ${msg.skip_gap_detector ? "ja" : "nei"}`,
+                `**Sammendrag:** ${msg.content}`,
+              ].join("\n\n");
+              setAgentLog(prev => ({ ...prev, Orchestrator: logEntry }));
             }
 
             if (msg.agent === "GapDetector" && msg.status === "question") {
@@ -159,6 +168,15 @@ export default function App() {
             }
             if (msg.agent === "InterviewPrep" && msg.status === "done") {
               setInterviewPrep(msg.content);
+            }
+            if (msg.agent === "Kravleser" && msg.status === "done") {
+              setAgentLog(prev => ({ ...prev, Kravleser: msg.content }));
+            }
+            if (msg.agent === "Research" && msg.status === "done") {
+              setAgentLog(prev => ({ ...prev, Research: msg.content }));
+            }
+            if (msg.agent === "Match" && msg.status === "done" && msg.full_match) {
+              setAgentLog(prev => ({ ...prev, Match: msg.full_match }));
             }
             if (msg.agent === "Validator" && msg.status === "done") {
               setValidation(msg.content);
@@ -219,6 +237,7 @@ export default function App() {
             sources={researchSources}
             interviewPrep={interviewPrep}
             validation={validation}
+            agentLog={agentLog}
           />
         </div>
       </main>

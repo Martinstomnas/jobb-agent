@@ -22,6 +22,14 @@ function Collapsible({ label, count, children }: CollapsibleProps) {
   );
 }
 
+const LOG_ORDER = ["Kravleser", "Research", "Match", "Orchestrator"] as const;
+const LOG_LABELS: Record<string, string> = {
+  Kravleser: "Kravleser — ekstraherte krav",
+  Research: "Research — selskapsinfo",
+  Match: "Match — full analyse",
+  Orchestrator: "Orchestrator — pipeline-plan",
+};
+
 interface OutputProps {
   content: string | null;
   running: boolean;
@@ -29,9 +37,10 @@ interface OutputProps {
   sources: ResearchSource[] | null;
   interviewPrep: string | null;
   validation: string | null;
+  agentLog: Record<string, string>;
 }
 
-export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation }: OutputProps) {
+export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation, agentLog }: OutputProps) {
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -108,6 +117,17 @@ export default function Output({ content, running, vinklingOutput, sources, inte
                   </li>
                 ))}
               </ul>
+            </div>
+          ))}
+        </Collapsible>
+      )}
+
+      {LOG_ORDER.some(a => agentLog[a]) && (
+        <Collapsible label="Agentlogg" count={`${LOG_ORDER.filter(a => agentLog[a]).length} agenter`}>
+          {LOG_ORDER.filter(a => agentLog[a]).map(agent => (
+            <div key={agent} className="log-entry">
+              <div className="log-agent-label">{LOG_LABELS[agent]}</div>
+              <ReactMarkdown>{agentLog[agent]}</ReactMarkdown>
             </div>
           ))}
         </Collapsible>
