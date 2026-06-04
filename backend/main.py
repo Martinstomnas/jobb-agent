@@ -32,6 +32,22 @@ logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
+
+def _log(session_id: str, agent: str, status: str, duration_ms: float | None = None) -> None:
+    entry: dict = {"session_id": session_id, "agent": agent, "status": status}
+    if duration_ms is not None:
+        entry["duration_ms"] = round(duration_ms)
+    logger.info(json.dumps(entry, ensure_ascii=False))
+
+
+async def _timed(coro) -> tuple:
+    """Kj rer en coroutine og returnerer (resultat_eller_unntak, elapsed_ms)."""
+    t0 = time.monotonic()
+    try:
+        return await coro, (time.monotonic() - t0) * 1000
+    except Exception as exc:
+        return exc, (time.monotonic() - t0) * 1000
+
 # session_id -> asyncio.Queue som Writer venter på svar fra
 _answer_queues: dict[str, asyncio.Queue] = {}
 _session_created: dict[str, float] = {}
@@ -112,16 +128,11 @@ async def extract_pdf(request: Request, file: UploadFile = File(...)):
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > _MAX_PDF_BYTES:
         raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
-    chunks: list[bytes] = []
-    size = 0
-    async for chunk in file:
-        size += len(chunk)
-        if size > _MAX_PDF_BYTES:
-            raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
-        chunks.append(chunk)
-    data = b"".join(chunks)
+    data = await file.read(_MAX_PDF_BYTES + 1)
     if not data:
         raise HTTPException(status_code=400, detail="Tom fil")
+    if len(data) > _MAX_PDF_BYTES:
+        raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
     try:
         doc = fitz.open(stream=data, filetype="pdf")
     except Exception:
@@ -157,6 +168,8 @@ async def analyze(request: Request, input: JobInput):
 
     async def stream():
         active: set[str] = set()
+        session_start = time.monotonic()
+        _log(session_id, "session", "start")
 
         try:
             # Kravleser + Research parallelt
@@ -164,35 +177,41 @@ async def analyze(request: Request, input: JobInput):
             yield event("Kravleser", "running")
             yield event("Research", "running")
 
-            krav_or_exc, research_or_exc = await asyncio.gather(
-                kravleser(input.job_posting),
-                research(input.job_posting),
-                return_exceptions=True,
+            (krav_or_exc, krav_ms), (research_or_exc, research_ms) = await asyncio.gather(
+                _timed(kravleser(input.job_posting)),
+                _timed(research(input.job_posting)),
             )
             active.difference_update({"Kravleser", "Research"})
 
             if isinstance(krav_or_exc, BaseException):
                 logger.error("Kravleser feilet", exc_info=krav_or_exc)
+                _log(session_id, "Kravleser", "error", krav_ms)
                 yield event("Kravleser", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
                 krav_result = krav_or_exc
+                _log(session_id, "Kravleser", "done", krav_ms)
                 yield event("Kravleser", "done", krav_result)
 
             if isinstance(research_or_exc, BaseException):
                 logger.error("Research feilet", exc_info=research_or_exc)
+                _log(session_id, "Research", "error", research_ms)
                 yield event("Research", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
                 research_text, research_sources = research_or_exc
+                _log(session_id, "Research", "done", research_ms)
                 yield event("Research", "done", research_text, sources=research_sources)
 
             if isinstance(krav_or_exc, BaseException) or isinstance(research_or_exc, BaseException):
+                _log(session_id, "session", "error", (time.monotonic() - session_start) * 1000)
                 yield event("FERDIG", "done")
                 return
 
             # Match
             active.add("Match")
             yield event("Match", "running")
+            t0 = time.monotonic()
             match_result = await match(krav_result, research_text, input.cv)
+            _log(session_id, "Match", "done", (time.monotonic() - t0) * 1000)
             active.discard("Match")
             _sections = re.findall(r"##[^\n]*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL)
             vinkling = _sections[-1].strip() if _sections else ""
@@ -201,7 +220,9 @@ async def analyze(request: Request, input: JobInput):
             # Orchestrator: bestem pipeline-strategi
             active.add("Orchestrator")
             yield event("Orchestrator", "running")
+            t0 = time.monotonic()
             plan = await orchestrator(krav_result, match_result)
+            _log(session_id, "Orchestrator", "done", (time.monotonic() - t0) * 1000)
             active.discard("Orchestrator")
             yield event(
                 "Orchestrator",
@@ -227,6 +248,7 @@ async def analyze(request: Request, input: JobInput):
             if not plan.get("skip_gap_detector"):
                 active.add("GapDetector")
                 yield event("GapDetector", "running")
+                t0 = time.monotonic()
                 questions = await gap_detector(research_text, input.cv, krav_result)
                 collected_answers = []
                 for question in questions:
@@ -240,6 +262,7 @@ async def analyze(request: Request, input: JobInput):
                         yield event("GapDetector", "answered", "")
                 if not questions:
                     yield event("GapDetector", "done", "Ingen gap å avklare")
+                _log(session_id, "GapDetector", "done", (time.monotonic() - t0) * 1000)
                 active.discard("GapDetector")
                 extra_context = "\n".join(collected_answers)
 
@@ -248,37 +271,41 @@ async def analyze(request: Request, input: JobInput):
             yield event("Writer", "running")
             yield event("InterviewPrep", "running")
 
-            writer_or_exc, interview_or_exc = await asyncio.gather(
-                writer(
+            (writer_or_exc, writer_ms), (interview_or_exc, interview_ms) = await asyncio.gather(
+                _timed(writer(
                     krav_result,
                     research_text,
                     match_result,
                     extra_context=extra_context,
-                ),
-                interview_prep(
+                )),
+                _timed(interview_prep(
                     krav_result,
                     research_text,
                     match_result,
                     extra_context=extra_context,
-                ),
-                return_exceptions=True,
+                )),
             )
             active.difference_update({"Writer", "InterviewPrep"})
 
             if isinstance(writer_or_exc, BaseException):
                 logger.error("Writer feilet", exc_info=writer_or_exc)
+                _log(session_id, "Writer", "error", writer_ms)
                 yield event("Writer", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
                 writer_result = writer_or_exc
+                _log(session_id, "Writer", "done", writer_ms)
                 yield event("Writer", "done", writer_result)
 
             if isinstance(interview_or_exc, BaseException):
                 logger.error("InterviewPrep feilet", exc_info=interview_or_exc)
+                _log(session_id, "InterviewPrep", "error", interview_ms)
                 yield event("InterviewPrep", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
+                _log(session_id, "InterviewPrep", "done", interview_ms)
                 yield event("InterviewPrep", "done", interview_or_exc)
 
             if isinstance(writer_or_exc, BaseException) or isinstance(interview_or_exc, BaseException):
+                _log(session_id, "session", "error", (time.monotonic() - session_start) * 1000)
                 yield event("FERDIG", "done")
                 return
 
@@ -287,7 +314,9 @@ async def analyze(request: Request, input: JobInput):
             for _attempt in range(2):
                 active.add("Validator")
                 yield event("Validator", "running")
+                t0 = time.monotonic()
                 validation = await validator(draft, input.cv, krav_result, research_text)
+                _log(session_id, "Validator", "done", (time.monotonic() - t0) * 1000)
                 active.discard("Validator")
 
                 has_issues = "ingen avvik" not in validation.lower()
@@ -298,6 +327,7 @@ async def analyze(request: Request, input: JobInput):
                 yield event("Validator", "issues", validation)
                 active.add("Writer")
                 yield event("Writer", "running")
+                t0 = time.monotonic()
                 draft = await writer(
                     krav_result,
                     research_text,
@@ -305,13 +335,16 @@ async def analyze(request: Request, input: JobInput):
                     extra_context=extra_context,
                     validation_issues=validation,
                 )
+                _log(session_id, "Writer", "done", (time.monotonic() - t0) * 1000)
                 active.discard("Writer")
                 yield event("Writer", "done", draft)
 
+            _log(session_id, "session", "done", (time.monotonic() - session_start) * 1000)
             yield event("FERDIG", "done")
 
         except Exception:
             logger.exception("Uventet feil i stream-orkestrering (session=%s)", session_id)
+            _log(session_id, "session", "error", (time.monotonic() - session_start) * 1000)
             for agent in list(active):
                 yield event(agent, "error", "En uventet feil oppstod. Prøv igjen.")
             yield event("FERDIG", "done")
