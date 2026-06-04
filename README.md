@@ -85,7 +85,7 @@ Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000
 
 ## Testing
 
-26 tester som dekker parsing, input-validering og pipeline-orkestrering.
+25 tester som dekker parsing, input-validering og pipeline-orkestrering.
 LLM-kall mockes, så hele suiten kjører på under ett sekund uten API-kost.
 
 ```bash
