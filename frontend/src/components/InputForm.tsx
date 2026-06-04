@@ -12,6 +12,7 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
   const [extraInfo, setExtraInfo] = useState("");
   const [cvFile, setCvFile] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [extraOpen, setExtraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,6 +51,7 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
 
   return (
     <form className="input-form" onSubmit={handleSubmit}>
+      {/* Stillingsannonse */}
       <div className="field">
         <label>Stillingsannonse</label>
         <textarea
@@ -61,47 +63,77 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
         />
       </div>
 
+      {/* CV */}
       <div className="field">
-        <div className="upload-row">
+        <div className="field-label-row">
           <label>CV</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf"
-            style={{ display: "none" }}
-            onChange={handlePdfUpload}
-            disabled={running || uploading}
-          />
-          <button
-            type="button"
-            className="upload-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={running || uploading}
-          >
-            {uploading ? <span className="spinner" /> : "Last opp PDF"}
-          </button>
-          {cvFile && <span className="pdf-indicator">{cvFile}</span>}
+          <div className="cv-tab-switch">
+            <button
+              type="button"
+              className="cv-tab active"
+              disabled={running}
+              onClick={() => {
+                /* already in text mode */
+              }}
+            >
+              Tekst
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              style={{ display: "none" }}
+              onChange={handlePdfUpload}
+              disabled={running || uploading}
+            />
+            <button
+              type="button"
+              className="cv-tab"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={running || uploading}
+            >
+              {uploading ? <span className="spinner" /> : "PDF"}
+            </button>
+          </div>
         </div>
+        {cvFile && <span className="pdf-indicator">{cvFile}</span>}
         <textarea
           value={cv}
-          onChange={(e) => { setCv(e.target.value); setCvFile(null); }}
+          onChange={(e) => {
+            setCv(e.target.value);
+            setCvFile(null);
+          }}
           placeholder="Lim inn CV som ren tekst, eller last opp PDF over..."
           rows={5}
           disabled={running}
         />
       </div>
 
-      <div className="field">
-        <label>Ekstra informasjon (valgfritt)</label>
-        <textarea
-          value={extraInfo}
-          onChange={(e) => setExtraInfo(e.target.value)}
-          placeholder="Tilleggsinfo som ikke er i CV-en: lenker, prosjekter, motivasjon, spesielle omstendigheter..."
-          rows={3}
-          disabled={running}
-        />
-      </div>
+      {/* Tilleggsinfo — collapsible */}
+      <button
+        type="button"
+        className="extra-info-toggle"
+        onClick={() => setExtraOpen((o) => !o)}
+        disabled={running}
+      >
+        <span className="extra-toggle-icon">{extraOpen ? "−" : "+"}</span>
+        <span className="extra-toggle-label">Tilleggsinfo (valgfritt)</span>
+      </button>
 
+      {extraOpen && (
+        <div className="field">
+          <textarea
+            value={extraInfo}
+            onChange={(e) => setExtraInfo(e.target.value)}
+            placeholder="Lenker, prosjekter, motivasjon, spesielle omstendigheter..."
+            rows={3}
+            disabled={running}
+            autoFocus
+          />
+        </div>
+      )}
+
+      {/* Submit */}
       <button type="submit" className="submit-btn" disabled={running}>
         {running ? (
           <>
@@ -114,8 +146,8 @@ export default function InputForm({ onSubmit, running }: InputFormProps) {
       </button>
 
       <p className="privacy-note">
-        Stillingsannonse og CV sendes til Anthropics API for analyse. Innholdet
-        lagres ikke av denne appen.
+        Stillingsannonse og CV sendes til Anthropics API. Ingenting lagres av
+        denne appen.
       </p>
     </form>
   );
