@@ -45,4 +45,4 @@ Se spesielt etter:
 Lever kun funn som korte kulepunkter. Hvis alt er forankret, svar kun: "Ingen avvik funnet."
 Maks 5 punkter.
 """
-    return await llm(SYSTEM, prompt, max_tokens=500)
+    return await llm(SYSTEM, prompt, max_tokens=500, temperature=0)
