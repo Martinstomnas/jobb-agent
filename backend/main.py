@@ -178,10 +178,8 @@ async def analyze(request: Request, input: JobInput):
             yield event("Match", "running")
             match_result = await match(krav_result, research_text, input.cv)
             active.discard("Match")
-            _vm = re.search(
-                r"## Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL
-            )
-            vinkling = _vm.group(1).strip() if _vm else ""
+            _sections = re.findall(r"##[^\n]*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL)
+            vinkling = _sections[-1].strip() if _sections else ""
             yield event("Match", "done", vinkling, full_match=match_result)
 
             # Orchestrator: bestem pipeline-strategi

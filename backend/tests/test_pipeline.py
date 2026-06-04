@@ -73,6 +73,25 @@ def test_happy_path_medium_match(monkeypatch):
     assert "Vinkle slik." in match_done["content"]
 
 
+def test_match_vinkling_robust_mot_omformulert_overskrift(monkeypatch):
+    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    _patch_agents(monkeypatch, plan=plan)
+    monkeypatch.setattr(
+        main,
+        "match",
+        AsyncMock(
+            return_value="## Sterke kort\n- Noe bra.\n\n## Anbefalt posisjonering:\nVinkle annerledes.\n"
+        ),
+    )
+
+    with TestClient(app) as client:
+        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
+        events = _events(res.text)
+
+    match_done = next(e for e in events if e["agent"] == "Match" and e["status"] == "done")
+    assert "Vinkle annerledes." in match_done["content"]
+
+
 def test_strong_match_hopper_over_gap_detector(monkeypatch):
     plan = {
         "fit_level": "strong",
