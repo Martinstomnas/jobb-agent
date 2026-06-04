@@ -5,12 +5,13 @@ og streamer agentoppdateringer via SSE.
 
 import asyncio
 import json
+import logging
 import re
 import time
 import uuid
 from contextlib import asynccontextmanager
 import fitz  # pymupdf
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from sse_starlette.sse import EventSourceResponse
@@ -23,6 +24,8 @@ from agents.writer import writer
 from agents.validator import validator
 from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
+
+logger = logging.getLogger(__name__)
 
 # session_id -> asyncio.Queue som Writer venter på svar fra
 _answer_queues: dict[str, asyncio.Queue] = {}
@@ -95,14 +98,22 @@ _MAX_PDF_BYTES = 5_000_000  # 5 MB
 
 
 @app.post("/extract-pdf")
-async def extract_pdf(file: UploadFile = File(...)):
+async def extract_pdf(request: Request, file: UploadFile = File(...)):
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Kun PDF-filer støttes")
-    data = await file.read()
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _MAX_PDF_BYTES:
+        raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in file:
+        size += len(chunk)
+        if size > _MAX_PDF_BYTES:
+            raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
+        chunks.append(chunk)
+    data = b"".join(chunks)
     if not data:
         raise HTTPException(status_code=400, detail="Tom fil")
-    if len(data) > _MAX_PDF_BYTES:
-        raise HTTPException(status_code=413, detail="PDF er for stor (maks 5 MB)")
     try:
         doc = fitz.open(stream=data, filetype="pdf")
     except Exception:
@@ -242,10 +253,10 @@ async def analyze(input: JobInput):
 
             yield event("FERDIG", "done")
 
-        except Exception as e:
-            err_msg = str(e) or "Ukjent feil"
+        except Exception:
+            logger.exception("Uventet feil i stream-orkestrering (session=%s)", session_id)
             for agent in list(active):
-                yield event(agent, "error", err_msg)
+                yield event(agent, "error", "En uventet feil oppstod. Prøv igjen.")
             yield event("FERDIG", "done")
         finally:
             _answer_queues.pop(session_id, None)
