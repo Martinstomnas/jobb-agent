@@ -35,7 +35,7 @@ Resultater streames til frontend fortløpende via SSE.
 | Match         | Sterke matcher, gap og anbefalt posisjonering (brukes internt av Writer) |
 | Orchestrator  | Vurderer fit-nivå og bestemmer dynamisk pipeline-strategi                |
 | GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                     |
-| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning               |
+| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste  |
 | InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
 | Validator     | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon |
 
