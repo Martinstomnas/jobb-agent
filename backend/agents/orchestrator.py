@@ -68,4 +68,14 @@ Registrer planen med set_plan.
         return dict(DEFAULT_PLAN)
 
     # Slå sammen med defaults så alle nøkler garantert finnes nedstrøms.
-    return {**DEFAULT_PLAN, **plan}
+    merged = {**DEFAULT_PLAN, **plan}
+
+    # Håndhev invariant: GapDetector kan kun hoppes over ved sterk match.
+    if merged["skip_gap_detector"] and merged["fit_level"] != "strong":
+        logger.warning(
+            "Orchestrator satte skip_gap_detector=True med fit_level=%r — overstyrt til False.",
+            merged["fit_level"],
+        )
+        merged["skip_gap_detector"] = False
+
+    return merged

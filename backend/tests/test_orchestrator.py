@@ -30,6 +30,16 @@ async def test_delvis_plan_fylles_med_defaults(monkeypatch):
     assert result["fit_summary"] == ""
 
 
+async def test_skip_gap_detector_overstyres_ved_ikke_sterk_match(monkeypatch):
+    monkeypatch.setattr(
+        orch,
+        "llm_tool",
+        AsyncMock(return_value={"fit_level": "medium", "fit_summary": "", "skip_gap_detector": True}),
+    )
+    result = await orch.orchestrator("krav", "match")
+    assert result["skip_gap_detector"] is False
+
+
 async def test_ingen_tool_use_gir_standardplan(monkeypatch):
     monkeypatch.setattr(orch, "llm_tool", AsyncMock(return_value=None))
     result = await orch.orchestrator("krav", "match")
