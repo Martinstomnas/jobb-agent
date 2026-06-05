@@ -13,7 +13,6 @@ const AGENTS = [
   "Kravleser",
   "Research",
   "Match",
-  "Orchestrator",
   "GapDetector",
   "Writer",
   "InterviewPrep",
@@ -73,21 +72,13 @@ export default function App() {
     const processEvent = (msg: Record<string, any>) => {
       if (msg.agent === "FERDIG") { setRunning(false); return; }
 
-      if (msg.agent === "Orchestrator" && msg.status === "warning") {
+      if (msg.agent === "Match" && msg.status === "warning") {
         setFitWarning({ summary: msg.content, sessionId: msg.session_id, key: Date.now() });
-        setAgentStates((prev) => ({ ...prev, Orchestrator: { status: "warning", content: msg.content } }));
+        setAgentStates((prev) => ({ ...prev, Match: { status: "warning", content: msg.content } }));
         return;
       }
-      if (msg.agent === "Orchestrator" && msg.status === "done") {
-        setFitWarning(null);
-        const fitLabel: Record<string, string> = { strong: "Sterk", medium: "Medium", weak: "Svak" };
-        const logEntry = [
-          `**Fit-nivå:** ${fitLabel[msg.fit_level] ?? msg.fit_level}`,
-          `**Hopp over GapDetector:** ${msg.skip_gap_detector ? "ja" : "nei"}`,
-          `**Sammendrag:** ${msg.content}`,
-        ].join("\n\n");
-        setAgentLog((prev) => ({ ...prev, Orchestrator: logEntry }));
-      }
+      if (msg.agent === "GapDetector" || msg.agent === "Writer") setFitWarning(null);
+
       if (msg.agent === "GapDetector" && msg.status === "question") {
         setPendingQuestion({ question: msg.content, sessionId: msg.session_id, key: Date.now() });
         setAgentStates((prev) => ({ ...prev, GapDetector: { status: "question", content: msg.content } }));

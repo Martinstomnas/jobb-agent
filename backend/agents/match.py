@@ -1,9 +1,13 @@
 """
 Agent: Match
 Sammenligner krav med kandidatens profil og finner styrker, gap og beste eksempler.
+Returnerer også en strukturert fit-vurdering for pipeline-beslutninger.
 """
 
-from utils.llm import llm
+import logging
+from utils.llm import llm_with_tool
+
+logger = logging.getLogger(__name__)
 
 SYSTEM = """
 Du er en karriererådgiver som hjelper kandidater å posisjonere seg best mulig.
@@ -14,8 +18,45 @@ Vær konkret – pek på spesifikke prosjekter og erfaringer, ikke generelle på
 Svar på norsk.
 """
 
+FIT_TOOL = {
+    "name": "set_fit",
+    "description": "Registrer fit-vurderingen etter at analysen er skrevet.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "fit_level": {
+                "type": "string",
+                "enum": ["strong", "medium", "weak"],
+                "description": (
+                    "'weak' = mangler flere sentrale krav (brukeren bør advares). "
+                    "'strong' = sterk match, GapDetector kan hoppes over."
+                ),
+            },
+            "fit_summary": {
+                "type": "string",
+                "description": "Én setning om matchkvaliteten — vises til brukeren ved svak match.",
+            },
+            "skip_gap_detector": {
+                "type": "boolean",
+                "description": "True kun ved 'strong' match.",
+            },
+        },
+        "required": ["fit_level", "fit_summary", "skip_gap_detector"],
+    },
+}
 
-async def match(krav: str, research: str, cv: str) -> str:
+DEFAULT_FIT = {
+    "fit_level": "medium",
+    "fit_summary": "",
+    "skip_gap_detector": False,
+}
+
+
+async def match(krav: str, research: str, cv: str) -> tuple[str, dict]:
+    """
+    Returnerer (analyse_tekst, fit_vurdering).
+    fit_vurdering inneholder fit_level, fit_summary og skip_gap_detector.
+    """
     prompt = f"""
 Du har fått disse tre inputene:
 
@@ -38,5 +79,21 @@ Gjør en ærlig match-analyse:
 
 ## Anbefalt vinkling
 Én setning — ikke punktliste, ikke tabell. Eksempel: "Posisjoner deg som en X med erfaring fra Y."
+
+Kall set_fit etter at analysen er skrevet.
 """
-    return await llm(SYSTEM, prompt, max_tokens=2000)
+    text, fit = await llm_with_tool(SYSTEM, prompt, FIT_TOOL, max_tokens=2000)
+
+    if fit is None:
+        logger.warning("Match returnerte ingen fit-vurdering — bruker standard.")
+        fit = dict(DEFAULT_FIT)
+
+    # Håndhev invariant
+    if fit.get("skip_gap_detector") and fit.get("fit_level") != "strong":
+        logger.warning(
+            "Match satte skip_gap_detector=True med fit_level=%r — overstyrt til False.",
+            fit.get("fit_level"),
+        )
+        fit["skip_gap_detector"] = False
+
+    return text, {**DEFAULT_FIT, **fit}

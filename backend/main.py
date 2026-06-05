@@ -25,7 +25,6 @@ from agents.match import match
 from agents.gap_detector import gap_detector
 from agents.writer import writer
 from agents.validator import validator
-from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
 
 logger = logging.getLogger(__name__)
@@ -206,35 +205,20 @@ async def analyze(request: Request, input: JobInput):
                 yield event("FERDIG", "done")
                 return
 
-            # Match
+            # Match — produserer analyse og fit-vurdering i ett kall
             active.add("Match")
             yield event("Match", "running")
             t0 = time.monotonic()
-            match_result = await match(krav_result, research_text, input.cv)
+            match_result, fit = await match(krav_result, research_text, input.cv)
             _log(session_id, "Match", "done", (time.monotonic() - t0) * 1000)
             active.discard("Match")
             _vinkling_match = re.search(r"##\s*Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL | re.IGNORECASE)
             vinkling = _vinkling_match.group(1).strip() if _vinkling_match else ""
             yield event("Match", "done", vinkling, full_match=match_result)
 
-            # Orchestrator: bestem pipeline-strategi
-            active.add("Orchestrator")
-            yield event("Orchestrator", "running")
-            t0 = time.monotonic()
-            plan = await orchestrator(krav_result, match_result)
-            _log(session_id, "Orchestrator", "done", (time.monotonic() - t0) * 1000)
-            active.discard("Orchestrator")
-            yield event(
-                "Orchestrator",
-                "done",
-                plan.get("fit_summary", ""),
-                fit_level=plan.get("fit_level"),
-                skip_gap_detector=plan.get("skip_gap_detector"),
-            )
-
             # Advar brukeren ved svak match og vent på bekreftelse
-            if plan.get("fit_level") == "weak":
-                yield event("Orchestrator", "warning", plan.get("fit_summary", ""), session_id=session_id)
+            if fit["fit_level"] == "weak":
+                yield event("Match", "warning", fit["fit_summary"], session_id=session_id)
                 try:
                     confirmation = await asyncio.wait_for(answer_queue.get(), timeout=300)
                     if confirmation.strip().lower() == "avbryt":
@@ -245,7 +229,7 @@ async def analyze(request: Request, input: JobInput):
 
             # Gap-detektor: hopp over ved sterk match
             extra_context = ""
-            if not plan.get("skip_gap_detector"):
+            if not fit["skip_gap_detector"]:
                 active.add("GapDetector")
                 yield event("GapDetector", "running")
                 t0 = time.monotonic()

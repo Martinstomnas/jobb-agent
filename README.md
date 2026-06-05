@@ -1,10 +1,10 @@
 # Jobbsøker-agent
 
-Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon. Pipelinen er dynamisk — en orchestrator-agent vurderer kandidatens match og bestemmer hvilke steg som er nødvendige.
+Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon. Pipelinen er dynamisk — Match-agenten vurderer kandidatens fit og bestemmer hvilke steg som er nødvendige.
 
 ## Arkitektur
 
-React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE). Spesialiserte Claude-agenter kjører i sekvens og delvis parallelt. Orchestratoren gjør pipelinen adaptiv basert på matchkvalitet.
+React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE). Spesialiserte Claude-agenter kjører i sekvens og delvis parallelt. Match-agenten gjør pipelinen adaptiv basert på matchkvalitet.
 
 ```
 Input: Stillingsannonse + CV (tekst eller PDF)
@@ -13,8 +13,7 @@ FastAPI /analyze
     ├── Kravleser + Research      (parallelt)
     │     Kravleser:  trekker ut krav og implisitte signaler
     │     Research:   websøk etter selskapsinfo, kultur, tech-stack
-    ├── Match          – kobler krav med kandidatens CV
-    ├── Orchestrator   – vurderer fit og bestemmer pipeline-strategi:
+    ├── Match          – kobler krav med kandidatens CV og vurderer fit:
     │     · "weak"   → advar bruker, vent på bekreftelse før videre
     │     · "strong" → hopp over GapDetector
     ├── GapDetector    – stiller 0–3 oppfølgingsspørsmål (hoppes over ved sterk match)
@@ -28,21 +27,20 @@ Resultater streames til frontend fortløpende via SSE.
 
 ## Agenter
 
-| Agent         | Ansvar                                                                   |
-| ------------- | ------------------------------------------------------------------------ |
-| Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                      |
-| Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                   |
-| Match         | Sterke matcher, gap og anbefalt posisjonering (brukes internt av Writer) |
-| Orchestrator  | Vurderer fit-nivå og bestemmer dynamisk pipeline-strategi                |
-| GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                     |
-| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste  |
-| InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer      |
-| Validator     | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon |
+| Agent         | Ansvar                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                                        |
+| Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                                     |
+| Match         | Sterke matcher, gap og anbefalt posisjonering — vurderer også fit-nivå for pipeline-styring |
+| GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                                       |
+| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste                    |
+| InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer                        |
+| Validator     | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon                   |
 
 ## Agentiske mønstre
 
-**Dynamisk pipeline (Orchestrator)**
-Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
+**Dynamisk pipeline (Match)**
+Match-agenten produserer analyse og fit-vurdering i ett LLM-kall og justerer pipelinen deretter:
 
 - Svak match → pauser og ber brukeren bekrefte før analysen fortsetter
 - Sterk match → hopper over GapDetector
@@ -91,7 +89,7 @@ Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000
 
 ## Testing
 
-**Backend** — 50 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
+**Backend** — 51 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
 
 ```bash
 cd backend
