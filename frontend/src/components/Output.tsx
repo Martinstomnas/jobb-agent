@@ -188,29 +188,34 @@ export default function Output({ content, running, vinklingOutput, sources, inte
           )}
           {agentLog.Research && (
             <Collapsible label="Selskapsresearch">
-              <ReactMarkdown>{agentLog.Research}</ReactMarkdown>
-            </Collapsible>
-          )}
-          {sources && sources.length > 0 && (
-            <Collapsible label="Søkelogg" count={`${sources.length} søk`}>
-              {sources.map((s, i) => (
-                <div key={i} className="source-group">
-                  <div className="source-query">"{s.query}"</div>
-                  <ul className="source-urls">
-                    {s.results.map((r, j) => (
-                      <li key={j}>
-                        <span className="source-title">{r.title}</span>
-                        <span className="source-url">{r.url}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </Collapsible>
-          )}
-          {agentLog.Orchestrator && (
-            <Collapsible label="Pipeline">
-              <ReactMarkdown>{agentLog.Orchestrator}</ReactMarkdown>
+              <ReactMarkdown
+                components={{
+                  a: ({ href, children }) => (
+                    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                  ),
+                }}
+              >
+                {agentLog.Research}
+              </ReactMarkdown>
+              {sources && sources.length > 0 && (() => {
+                const uniqueUrls = Array.from(
+                  new Map(
+                    sources.flatMap(s => s.results).map(r => [r.url, r])
+                  ).values()
+                );
+                return (
+                  <div className="research-sources">
+                    <div className="research-sources-label">Kilder</div>
+                    <ul className="research-sources-list">
+                      {uniqueUrls.map((r, i) => (
+                        <li key={i}>
+                          <a href={r.url} target="_blank" rel="noopener noreferrer">{r.title || r.url}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
             </Collapsible>
           )}
         </>

@@ -26,6 +26,11 @@ Søk aktivt på nett for å finne fersk og relevant informasjon.
 Fokuser på: kultur, tech-stack, verdier, kunder, nyheter, og hva ansatte sier.
 Vær faktabasert. Skill tydelig mellom det du fant på nett og egne antakelser.
 Svar på norsk.
+
+Når du refererer til spesifikk informasjon du har funnet på nett, siter kilden inline med markdown-lenke: [kildenavn](url).
+Eksempel: "Selskapet ble grunnlagt i 2010 [Selskapet.no](https://selskapet.no/om-oss) og har 200 ansatte [LinkedIn](https://linkedin.com/company/selskapet)."
+Ikke legg alle kilder i en egen seksjon – integrer dem direkte i teksten der påstandene dukker opp.
+Informasjon du ikke kan bekrefte fra søkeresultatene skal merkes med [USIKKER].
 """,
             messages=[
                 {
@@ -39,16 +44,12 @@ Annonse:
 {job_posting}
 ---
 
-Lever en strukturert oppsummering:
+Lever en strukturert oppsummering med inline-kildehenvisninger (markdown-lenker) for alle påstander du kan bekrefte fra søkeresultatene:
 ## Selskapet
 ## Kultur og verdier
 ## Tech-stack og arbeidsmetoder
 ## Aktuelt (nyheter, vekst, prosjekter)
-## Hva tidligere/nåværende ansatte sier [USIKKER hvis ikke funnet]
-
-## Kildegrunnlag
-- Bekreftet fra nett: (list punktvis hva som er dokumentert i søkeresultatene)
-- Antatt / ikke funnet: (list punktvis hva som er antatt eller ikke bekreftet)
+## Hva tidligere/nåværende ansatte sier
 """,
                 }
             ],

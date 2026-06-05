@@ -73,4 +73,4 @@ Hva avslutningen bør inneholde konkret i denne konteksten. Unngå generiske rå
 ## Unngå
 2–3 konkrete ting som ville svekket søknaden i denne spesifikke konteksten.
 """
-    return await llm(SYSTEM, prompt, max_tokens=1500)
+    return await llm(SYSTEM, prompt, max_tokens=3000)
