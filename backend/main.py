@@ -19,13 +19,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
 
-from agents.kravleser import kravleser
+from agents.job_posting_analyzer import job_posting_analyzer
 from agents.research import research
 from agents.match import match
 from agents.gap_detector import gap_detector
 from agents.writer import writer
 from agents.validator import validator
-from agents.orchestrator import orchestrator
 from agents.interview_prep import interview_prep
 
 logger = logging.getLogger(__name__)
@@ -172,25 +171,25 @@ async def analyze(request: Request, input: JobInput):
         _log(session_id, "session", "start")
 
         try:
-            # Kravleser + Research parallelt
-            active.update({"Kravleser", "Research"})
-            yield event("Kravleser", "running")
+            # JobPostingAnalyzer + Research parallelt
+            active.update({"JobPostingAnalyzer", "Research"})
+            yield event("JobPostingAnalyzer", "running")
             yield event("Research", "running")
 
             (krav_or_exc, krav_ms), (research_or_exc, research_ms) = await asyncio.gather(
-                _timed(kravleser(input.job_posting)),
+                _timed(job_posting_analyzer(input.job_posting)),
                 _timed(research(input.job_posting)),
             )
-            active.difference_update({"Kravleser", "Research"})
+            active.difference_update({"JobPostingAnalyzer", "Research"})
 
             if isinstance(krav_or_exc, BaseException):
-                logger.error("Kravleser feilet", exc_info=krav_or_exc)
-                _log(session_id, "Kravleser", "error", krav_ms)
-                yield event("Kravleser", "error", "En uventet feil oppstod. Prøv igjen.")
+                logger.error("JobPostingAnalyzer feilet", exc_info=krav_or_exc)
+                _log(session_id, "JobPostingAnalyzer", "error", krav_ms)
+                yield event("JobPostingAnalyzer", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
                 krav_result = krav_or_exc
-                _log(session_id, "Kravleser", "done", krav_ms)
-                yield event("Kravleser", "done", krav_result)
+                _log(session_id, "JobPostingAnalyzer", "done", krav_ms)
+                yield event("JobPostingAnalyzer", "done", krav_result)
 
             if isinstance(research_or_exc, BaseException):
                 logger.error("Research feilet", exc_info=research_or_exc)
@@ -206,35 +205,20 @@ async def analyze(request: Request, input: JobInput):
                 yield event("FERDIG", "done")
                 return
 
-            # Match
+            # Match — produserer analyse og fit-vurdering i ett kall
             active.add("Match")
             yield event("Match", "running")
             t0 = time.monotonic()
-            match_result = await match(krav_result, research_text, input.cv)
+            match_result, fit = await match(krav_result, research_text, input.cv)
             _log(session_id, "Match", "done", (time.monotonic() - t0) * 1000)
             active.discard("Match")
-            _sections = re.findall(r"##[^\n]*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL)
-            vinkling = _sections[-1].strip() if _sections else ""
+            _vinkling_match = re.search(r"##\s*Anbefalt vinkling\s*\n(.*?)(?=\n##|\Z)", match_result, re.DOTALL | re.IGNORECASE)
+            vinkling = _vinkling_match.group(1).strip() if _vinkling_match else ""
             yield event("Match", "done", vinkling, full_match=match_result)
 
-            # Orchestrator: bestem pipeline-strategi
-            active.add("Orchestrator")
-            yield event("Orchestrator", "running")
-            t0 = time.monotonic()
-            plan = await orchestrator(krav_result, match_result)
-            _log(session_id, "Orchestrator", "done", (time.monotonic() - t0) * 1000)
-            active.discard("Orchestrator")
-            yield event(
-                "Orchestrator",
-                "done",
-                plan.get("fit_summary", ""),
-                fit_level=plan.get("fit_level"),
-                skip_gap_detector=plan.get("skip_gap_detector"),
-            )
-
             # Advar brukeren ved svak match og vent på bekreftelse
-            if plan.get("fit_level") == "weak":
-                yield event("Orchestrator", "warning", plan.get("fit_summary", ""), session_id=session_id)
+            if fit["fit_level"] == "weak":
+                yield event("Match", "warning", fit["fit_summary"], session_id=session_id)
                 try:
                     confirmation = await asyncio.wait_for(answer_queue.get(), timeout=300)
                     if confirmation.strip().lower() == "avbryt":
@@ -243,28 +227,25 @@ async def analyze(request: Request, input: JobInput):
                 except asyncio.TimeoutError:
                     pass
 
-            # Gap-detektor: hopp over ved sterk match
-            extra_context = ""
-            if not plan.get("skip_gap_detector"):
-                active.add("GapDetector")
-                yield event("GapDetector", "running")
-                t0 = time.monotonic()
-                questions = await gap_detector(research_text, input.cv, krav_result)
-                collected_answers = []
-                for question in questions:
-                    yield event("GapDetector", "question", question, session_id=session_id)
-                    try:
-                        answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
-                        yield event("GapDetector", "answered", answer)
-                        if answer.strip():
-                            collected_answers.append(answer)
-                    except asyncio.TimeoutError:
-                        yield event("GapDetector", "answered", "")
-                if not questions:
-                    yield event("GapDetector", "done", "Ingen gap å avklare")
-                _log(session_id, "GapDetector", "done", (time.monotonic() - t0) * 1000)
-                active.discard("GapDetector")
-                extra_context = "\n".join(collected_answers)
+            active.add("GapDetector")
+            yield event("GapDetector", "running")
+            t0 = time.monotonic()
+            questions = await gap_detector(research_text, input.cv, krav_result)
+            collected_answers = []
+            for question in questions:
+                yield event("GapDetector", "question", question, session_id=session_id)
+                try:
+                    answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
+                    yield event("GapDetector", "answered", answer)
+                    if answer.strip():
+                        collected_answers.append(answer)
+                except asyncio.TimeoutError:
+                    yield event("GapDetector", "answered", "")
+            if not questions:
+                yield event("GapDetector", "done", "Ingen gap å avklare")
+            _log(session_id, "GapDetector", "done", (time.monotonic() - t0) * 1000)
+            active.discard("GapDetector")
+            extra_context = "\n".join(collected_answers)
 
             # Writer + InterviewPrep parallelt
             active.update({"Writer", "InterviewPrep"})
@@ -294,7 +275,6 @@ async def analyze(request: Request, input: JobInput):
             else:
                 writer_result = writer_or_exc
                 _log(session_id, "Writer", "done", writer_ms)
-                yield event("Writer", "done", writer_result)
 
             if isinstance(interview_or_exc, BaseException):
                 logger.error("InterviewPrep feilet", exc_info=interview_or_exc)
@@ -309,24 +289,25 @@ async def analyze(request: Request, input: JobInput):
                 yield event("FERDIG", "done")
                 return
 
-            # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang)
+            # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang).
+            # Writer-resultatet sendes aldri til klienten før valideringsløkken er ferdig,
+            # slik at brukeren kun ser det endelige utkastet.
             draft = writer_result
             for _attempt in range(2):
                 active.add("Validator")
                 yield event("Validator", "running")
                 t0 = time.monotonic()
-                validation = await validator(draft, input.cv, krav_result, research_text)
+                validation = await validator(draft, input.cv, krav_result, research_text, extra_context)
                 _log(session_id, "Validator", "done", (time.monotonic() - t0) * 1000)
                 active.discard("Validator")
 
                 has_issues = "ingen avvik" not in validation.lower()
                 if not has_issues or _attempt == 1:
+                    yield event("Writer", "done", draft)
                     yield event("Validator", "done", validation)
                     break
 
                 yield event("Validator", "issues", validation)
-                active.add("Writer")
-                yield event("Writer", "running")
                 t0 = time.monotonic()
                 draft = await writer(
                     krav_result,
@@ -336,8 +317,6 @@ async def analyze(request: Request, input: JobInput):
                     validation_issues=validation,
                 )
                 _log(session_id, "Writer", "done", (time.monotonic() - t0) * 1000)
-                active.discard("Writer")
-                yield event("Writer", "done", draft)
 
             _log(session_id, "session", "done", (time.monotonic() - session_start) * 1000)
             yield event("FERDIG", "done")

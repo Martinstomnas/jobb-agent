@@ -14,7 +14,16 @@ Svar på norsk.
 """
 
 
-async def validator(draft: str, cv: str, krav: str, research: str) -> str:
+async def validator(
+    draft: str, cv: str, krav: str, research: str, extra_context: str = ""
+) -> str:
+    extra_section = (
+        f"\nBekreftet tilleggsinformasjon fra kandidaten:\n{extra_context}\n\n"
+        "VIKTIG: Punktene over er direkte bekreftet av kandidaten og skal aldri flagges som avvik. "
+        "Behandle dem som like gyldige som CV-en.\n"
+        if extra_context
+        else ""
+    )
     prompt = f"""
 Her er en søknadsdisposisjon:
 
@@ -32,15 +41,15 @@ Krav fra stillingen:
 
 Research om arbeidsgiver:
 {research}
-
+{extra_section}
 ---
 
-Gå gjennom disposisjonen og identifiser påstander som IKKE kan verifiseres i kildematerialet.
+Gå gjennom disposisjonen og identifiser påstander som IKKE kan verifiseres i kildematerialet ovenfor.
 
 Se spesielt etter:
-- Ferdigheter, titler eller erfaringer som ikke finnes i CV-en
-- Spesifikke prosjekter eller prestasjoner som ikke er nevnt i CV
-- Påstander om kandidaten som går utover det CV-en faktisk dokumenterer
+- Ferdigheter, titler eller erfaringer som ikke finnes i CV-en eller bekreftet tilleggsinformasjon
+- Spesifikke prosjekter eller prestasjoner som ikke er nevnt i CV eller bekreftet tilleggsinformasjon
+- Påstander om kandidaten som går utover det kildematerialet faktisk dokumenterer
 
 Lever kun funn som korte kulepunkter. Hvis alt er forankret, svar kun: "Ingen avvik funnet."
 Maks 5 punkter.

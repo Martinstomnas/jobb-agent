@@ -15,6 +15,7 @@ Regler:
 - Navngi spesifikke prosjekter, roller og arbeidsgivere fra CV der det er mulig.
 - Skriv råd og pekere – ikke ferdige setninger kandidaten skal copy-paste.
 - Vær konkret og direkte. Ingen fyller, ingen klisjeer.
+- Maks 400 ord totalt.
 - Svar på norsk.
 """
 
@@ -73,4 +74,4 @@ Hva avslutningen bør inneholde konkret i denne konteksten. Unngå generiske rå
 ## Unngå
 2–3 konkrete ting som ville svekket søknaden i denne spesifikke konteksten.
 """
-    return await llm(SYSTEM, prompt, max_tokens=1500)
+    return await llm(SYSTEM, prompt, max_tokens=3000)

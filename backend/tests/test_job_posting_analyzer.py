@@ -1,4 +1,4 @@
-import agents.kravleser as module
+import agents.job_posting_analyzer as module
 
 
 async def test_job_posting_i_prompt(monkeypatch):
@@ -9,7 +9,7 @@ async def test_job_posting_i_prompt(monkeypatch):
         return "krav-output"
 
     monkeypatch.setattr(module, "llm", fake_llm)
-    result = await module.kravleser("Vi søker en Python-utvikler med 5 års erfaring")
+    result = await module.job_posting_analyzer("Vi søker en Python-utvikler med 5 års erfaring")
     assert "Vi søker en Python-utvikler" in captured["prompt"]
     assert result == "krav-output"
 
@@ -22,7 +22,7 @@ async def test_bruker_temperatur_null(monkeypatch):
         return "output"
 
     monkeypatch.setattr(module, "llm", fake_llm)
-    await module.kravleser("annonse")
+    await module.job_posting_analyzer("annonse")
     assert captured["kwargs"].get("temperature") == 0
 
 
@@ -34,5 +34,5 @@ async def test_tom_annonse_sendes_videre(monkeypatch):
         return ""
 
     monkeypatch.setattr(module, "llm", fake_llm)
-    result = await module.kravleser("")
+    result = await module.job_posting_analyzer("")
     assert result == ""

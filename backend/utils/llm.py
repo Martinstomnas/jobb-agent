@@ -88,3 +88,39 @@ async def llm_tool(
         if getattr(block, "type", None) == "tool_use":
             return block.input
     return None
+
+
+async def llm_with_tool(
+    system: str,
+    user: str,
+    tool: dict,
+    max_tokens: int = 1500,
+    temperature: float = 1.0,
+) -> tuple[str, dict | None]:
+    """
+    Kaller modellen og lar den både skrive tekst og bruke et verktøy i samme svar.
+    Returnerer (tekst, tool_input | None).
+    Brukes når vi trenger fri tekstanalyse OG strukturerte felt fra ett LLM-kall.
+    """
+    async with api_errors():
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            tools=[tool],
+            tool_choice={"type": "auto"},
+            messages=[{"role": "user", "content": user}],
+        )
+    if response.stop_reason == "max_tokens":
+        logger.warning(
+            "Svar avkuttet av max_tokens (%d) — vurder å heve grensen.", max_tokens
+        )
+    text = "\n".join(
+        block.text for block in response.content if hasattr(block, "text")
+    )
+    tool_input = next(
+        (block.input for block in response.content if getattr(block, "type", None) == "tool_use"),
+        None,
+    )
+    return text, tool_input

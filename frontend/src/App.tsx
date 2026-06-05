@@ -10,10 +10,9 @@ import type { AgentStates, ResearchSource } from "./types";
 import { API_URL } from "./config";
 
 const AGENTS = [
-  "Kravleser",
+  "JobPostingAnalyzer",
   "Research",
   "Match",
-  "Orchestrator",
   "GapDetector",
   "Writer",
   "InterviewPrep",
@@ -71,23 +70,20 @@ export default function App() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processEvent = (msg: Record<string, any>) => {
-      if (msg.agent === "FERDIG") { setRunning(false); return; }
-
-      if (msg.agent === "Orchestrator" && msg.status === "warning") {
-        setFitWarning({ summary: msg.content, sessionId: msg.session_id, key: Date.now() });
-        setAgentStates((prev) => ({ ...prev, Orchestrator: { status: "warning", content: msg.content } }));
+      if (msg.agent === "FERDIG") {
+        setRunning(false);
+        setFitWarning(null);
+        setPendingQuestion(null);
         return;
       }
-      if (msg.agent === "Orchestrator" && msg.status === "done") {
-        setFitWarning(null);
-        const fitLabel: Record<string, string> = { strong: "Sterk", medium: "Medium", weak: "Svak" };
-        const logEntry = [
-          `**Fit-nivå:** ${fitLabel[msg.fit_level] ?? msg.fit_level}`,
-          `**Hopp over GapDetector:** ${msg.skip_gap_detector ? "ja" : "nei"}`,
-          `**Sammendrag:** ${msg.content}`,
-        ].join("\n\n");
-        setAgentLog((prev) => ({ ...prev, Orchestrator: logEntry }));
+
+      if (msg.agent === "Match" && msg.status === "warning") {
+        setFitWarning({ summary: msg.content, sessionId: msg.session_id, key: Date.now() });
+        setAgentStates((prev) => ({ ...prev, Match: { status: "warning", content: msg.content } }));
+        return;
       }
+      if (msg.agent === "GapDetector" || msg.agent === "Writer") setFitWarning(null);
+
       if (msg.agent === "GapDetector" && msg.status === "question") {
         setPendingQuestion({ question: msg.content, sessionId: msg.session_id, key: Date.now() });
         setAgentStates((prev) => ({ ...prev, GapDetector: { status: "question", content: msg.content } }));
@@ -105,7 +101,7 @@ export default function App() {
       if (msg.agent === "Match" && msg.status === "done") setVinklingOutput(msg.content);
       if (msg.agent === "Writer" && msg.status === "done") setOutput(msg.content);
       if (msg.agent === "InterviewPrep" && msg.status === "done") setInterviewPrep(msg.content);
-      if (msg.agent === "Kravleser" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Kravleser: msg.content }));
+      if (msg.agent === "JobPostingAnalyzer" && msg.status === "done") setAgentLog((prev) => ({ ...prev, JobPostingAnalyzer: msg.content }));
       if (msg.agent === "Research" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Research: msg.content }));
       if (msg.agent === "Match" && msg.status === "done" && msg.full_match) setAgentLog((prev) => ({ ...prev, Match: msg.full_match }));
       if (msg.agent === "Validator" && msg.status === "done") setValidation(msg.content);

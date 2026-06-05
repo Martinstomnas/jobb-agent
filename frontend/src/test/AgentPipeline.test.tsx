@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import AgentPipeline from '../components/AgentPipeline'
 import type { AgentStates } from '../types'
 
-const AGENTS = ['Kravleser', 'Research', 'Match', 'Writer']
+const AGENTS = ['JobPostingAnalyzer', 'Research', 'Match', 'Writer']
 
 describe('AgentPipeline', () => {
   it('viser alle agentnavnene', () => {
@@ -18,7 +18,7 @@ describe('AgentPipeline', () => {
 
   it('viser ferdig-teller når agenter er done', () => {
     const states: AgentStates = {
-      Kravleser: { status: 'done' },
+      JobPostingAnalyzer: { status: 'done' },
       Research: { status: 'done' },
     }
     render(<AgentPipeline agents={AGENTS} states={states} />)
@@ -27,7 +27,7 @@ describe('AgentPipeline', () => {
 
   it('setter agent-card-klassen basert på status', () => {
     const states: AgentStates = {
-      Kravleser: { status: 'done' },
+      JobPostingAnalyzer: { status: 'done' },
       Research: { status: 'running' },
     }
     const { container } = render(<AgentPipeline agents={AGENTS} states={states} />)
@@ -37,7 +37,7 @@ describe('AgentPipeline', () => {
   })
 
   it('viser hake-ikon for done-agenter', () => {
-    const states: AgentStates = { Kravleser: { status: 'done' } }
+    const states: AgentStates = { JobPostingAnalyzer: { status: 'done' } }
     render(<AgentPipeline agents={AGENTS} states={states} />)
     expect(screen.getByText('✓')).toBeInTheDocument()
   })

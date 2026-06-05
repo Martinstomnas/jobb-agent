@@ -41,7 +41,7 @@ async def test_tom_extra_context_gir_ingen_tilleggsseksjon(monkeypatch):
     assert "Tilleggsinformasjon" not in captured["prompt"]
 
 
-async def test_max_tokens_er_1500(monkeypatch):
+async def test_max_tokens_er_3000(monkeypatch):
     captured = {}
 
     async def fake_llm(system, prompt, **kwargs):
@@ -50,4 +50,4 @@ async def test_max_tokens_er_1500(monkeypatch):
 
     monkeypatch.setattr(module, "llm", fake_llm)
     await module.writer("krav", "research", "match")
-    assert captured["kwargs"].get("max_tokens") == 1500
+    assert captured["kwargs"].get("max_tokens") == 3000

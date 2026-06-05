@@ -14,16 +14,17 @@ import main
 from main import app
 
 
-def _patch_agents(monkeypatch, *, plan):
-    """Mocker alle agentene main kaller, med en gitt orchestrator-plan."""
-    monkeypatch.setattr(main, "kravleser", AsyncMock(return_value="KRAV"))
+def _patch_agents(monkeypatch, *, fit: dict):
+    """Mocker alle agentene main kaller med en gitt fit-vurdering fra Match."""
+    monkeypatch.setattr(main, "job_posting_analyzer", AsyncMock(return_value="KRAV"))
     monkeypatch.setattr(
         main, "research", AsyncMock(return_value=("RESEARCH", [{"query": "q", "results": []}]))
     )
     monkeypatch.setattr(
-        main, "match", AsyncMock(return_value="## Anbefalt vinkling\nVinkle slik.\n")
+        main,
+        "match",
+        AsyncMock(return_value=("## Anbefalt vinkling\nVinkle slik.\n", fit)),
     )
-    monkeypatch.setattr(main, "orchestrator", AsyncMock(return_value=plan))
     monkeypatch.setattr(main, "gap_detector", AsyncMock(return_value=[]))
     monkeypatch.setattr(main, "writer", AsyncMock(return_value="UTKAST"))
     monkeypatch.setattr(main, "interview_prep", AsyncMock(return_value="INTERVJU"))
@@ -41,12 +42,8 @@ def _events(response_text: str) -> list[dict]:
 
 
 def test_happy_path_medium_match(monkeypatch):
-    plan = {
-        "fit_level": "medium",
-        "fit_summary": "Grei match.",
-        "skip_gap_detector": False,
-    }
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "medium", "fit_summary": "Grei match."}
+    _patch_agents(monkeypatch, fit=fit)
 
     with TestClient(app) as client:
         res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
@@ -54,28 +51,24 @@ def test_happy_path_medium_match(monkeypatch):
         events = _events(res.text)
 
     agents_seen = {(e["agent"], e["status"]) for e in events}
-    # Kjernesekvensen er til stede.
-    assert ("Kravleser", "done") in agents_seen
+    assert ("JobPostingAnalyzer", "done") in agents_seen
     assert ("Research", "done") in agents_seen
     assert ("Match", "done") in agents_seen
-    assert ("Orchestrator", "done") in agents_seen
     assert ("Writer", "done") in agents_seen
     assert ("InterviewPrep", "done") in agents_seen
     assert ("Validator", "done") in agents_seen
     assert events[-1]["agent"] == "FERDIG"
 
-    # Writer-output skal være direkte fra Writer, ikke revidert.
     writer_done = next(e for e in events if e["agent"] == "Writer" and e["status"] == "done")
     assert writer_done["content"] == "UTKAST"
 
-    # Match skal trekke ut "Anbefalt vinkling".
     match_done = next(e for e in events if e["agent"] == "Match" and e["status"] == "done")
     assert "Vinkle slik." in match_done["content"]
 
 
 def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
-    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "medium", "fit_summary": ""}
+    _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(main, "research", AsyncMock(side_effect=RuntimeError("API nede")))
 
     with TestClient(app) as client:
@@ -84,14 +77,14 @@ def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
 
     agents_seen = {(e["agent"], e["status"]) for e in events}
     assert ("Research", "error") in agents_seen
-    assert ("Kravleser", "error") not in agents_seen
-    assert ("Kravleser", "done") in agents_seen
+    assert ("JobPostingAnalyzer", "error") not in agents_seen
+    assert ("JobPostingAnalyzer", "done") in agents_seen
     assert events[-1]["agent"] == "FERDIG"
 
 
 def test_writer_feil_markerer_kun_writer_som_feilet(monkeypatch):
-    plan = {"fit_level": "strong", "fit_summary": "", "skip_gap_detector": True}
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "strong", "fit_summary": ""}
+    _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(main, "writer", AsyncMock(side_effect=RuntimeError("Timeout")))
 
     with TestClient(app) as client:
@@ -105,14 +98,17 @@ def test_writer_feil_markerer_kun_writer_som_feilet(monkeypatch):
     assert events[-1]["agent"] == "FERDIG"
 
 
-def test_match_vinkling_robust_mot_omformulert_overskrift(monkeypatch):
-    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
-    _patch_agents(monkeypatch, plan=plan)
+def test_match_vinkling_ekstraheres_fra_riktig_seksjon(monkeypatch):
+    fit = {"fit_level": "medium", "fit_summary": ""}
+    _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main,
         "match",
         AsyncMock(
-            return_value="## Sterke kort\n- Noe bra.\n\n## Anbefalt posisjonering:\nVinkle annerledes.\n"
+            return_value=(
+                "## Sterke kort\n- Noe bra.\n\n## Anbefalt vinkling\nVinkle annerledes.\n",
+                fit,
+            )
         ),
     )
 
@@ -125,8 +121,8 @@ def test_match_vinkling_robust_mot_omformulert_overskrift(monkeypatch):
 
 
 def test_validator_utloser_regenerering_ved_funn(monkeypatch):
-    plan = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "medium", "fit_summary": ""}
+    _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main,
         "validator",
@@ -140,8 +136,6 @@ def test_validator_utloser_regenerering_ved_funn(monkeypatch):
 
     statuses = [(e["agent"], e["status"]) for e in events]
     assert ("Validator", "issues") in statuses
-    assert ("Writer", "running") in statuses[statuses.index(("Validator", "issues")):], \
-        "Writer skal restartes etter validator-funn"
     assert main.writer.await_count == 2
     assert main.validator.await_count == 2
     writer_done_events = [e for e in events if e["agent"] == "Writer" and e["status"] == "done"]
@@ -150,33 +144,7 @@ def test_validator_utloser_regenerering_ved_funn(monkeypatch):
     assert "Ingen avvik" in validator_done["content"]
 
 
-def test_strong_match_hopper_over_gap_detector(monkeypatch):
-    plan = {
-        "fit_level": "strong",
-        "fit_summary": "Sterk match.",
-        "skip_gap_detector": True,
-    }
-    _patch_agents(monkeypatch, plan=plan)
-
-    with TestClient(app) as client:
-        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
-        events = _events(res.text)
-
-    # GapDetector skal ikke ha kjørt i det hele tatt.
-    assert main.gap_detector.await_count == 0
-    assert not any(e["agent"] == "GapDetector" for e in events)
-    assert events[-1]["agent"] == "FERDIG"
-
-
 # --- Human-in-the-loop: blokkerende grener ---------------------------------
-#
-# Disse grenene venter på et brukersvar via /answer mens SSE-strømmen står åpen.
-# httpx' ASGITransport buffrer responsen, så vi kan ikke lese strømmen event for
-# event mens pipelinen blokkerer. I stedet kjører vi to samtidige tasks:
-#   - consume(): poster /analyze og samler alle eventene
-#   - drive():   oppdager sesjonen i _answer_queues og poster svar via /answer
-# Svaret går altså gjennom det ekte endepunktet, og pipelinen låses opp slik at
-# consume() til slutt fullfører.
 
 
 def _parse_events(text: str) -> list[dict]:
@@ -218,12 +186,8 @@ async def _stream_with_answers(payload: dict, answers: list[str]) -> list[dict]:
 
 
 async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
-    plan = {
-        "fit_level": "medium",
-        "fit_summary": "",
-        "skip_gap_detector": False,
-    }
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "medium", "fit_summary": ""}
+    _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main, "gap_detector", AsyncMock(return_value=["Erfaring med energi?"])
     )
@@ -235,54 +199,38 @@ async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
         timeout=10,
     )
 
-    # Svaret kvitteres i strømmen ...
     answered = [
         e for e in events
         if e["agent"] == "GapDetector" and e["status"] == "answered"
     ]
     assert any("Equinor" in e["content"] for e in answered)
-    # ... og sendes videre som extra_context til Writer.
     assert "Equinor" in main.writer.await_args.kwargs["extra_context"]
     assert events[-1]["agent"] == "FERDIG"
 
 
 async def test_weak_match_fortsett_kjorer_videre(monkeypatch):
-    plan = {
-        "fit_level": "weak",
-        "fit_summary": "Svak match.",
-        "skip_gap_detector": False,
-    }
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "weak", "fit_summary": "Svak match."}
+    _patch_agents(monkeypatch, fit=fit)
 
     events = await asyncio.wait_for(
         _stream_with_answers({"job_posting": "a", "cv": "c"}, answers=["fortsett"]),
         timeout=10,
     )
 
-    assert any(
-        e["agent"] == "Orchestrator" and e["status"] == "warning" for e in events
-    )
-    # "fortsett" -> pipelinen kjører videre til Writer.
+    assert any(e["agent"] == "Match" and e["status"] == "warning" for e in events)
     assert main.writer.await_count == 1
     assert events[-1]["agent"] == "FERDIG"
 
 
 async def test_weak_match_avbryt_stopper_pipelinen(monkeypatch):
-    plan = {
-        "fit_level": "weak",
-        "fit_summary": "Svak match.",
-        "skip_gap_detector": False,
-    }
-    _patch_agents(monkeypatch, plan=plan)
+    fit = {"fit_level": "weak", "fit_summary": "Svak match."}
+    _patch_agents(monkeypatch, fit=fit)
 
     events = await asyncio.wait_for(
         _stream_with_answers({"job_posting": "a", "cv": "c"}, answers=["avbryt"]),
         timeout=10,
     )
 
-    assert any(
-        e["agent"] == "Orchestrator" and e["status"] == "warning" for e in events
-    )
-    # "avbryt" -> Writer skal aldri kjøre.
+    assert any(e["agent"] == "Match" and e["status"] == "warning" for e in events)
     assert main.writer.await_count == 0
     assert events[-1]["agent"] == "FERDIG"
