@@ -15,6 +15,7 @@ Regler:
 - Navngi spesifikke prosjekter, roller og arbeidsgivere fra CV der det er mulig.
 - Skriv råd og pekere – ikke ferdige setninger kandidaten skal copy-paste.
 - Vær konkret og direkte. Ingen fyller, ingen klisjeer.
+- Maks 400 ord totalt.
 - Svar på norsk.
 """
 

@@ -294,7 +294,6 @@ async def analyze(request: Request, input: JobInput):
             else:
                 writer_result = writer_or_exc
                 _log(session_id, "Writer", "done", writer_ms)
-                yield event("Writer", "done", writer_result)
 
             if isinstance(interview_or_exc, BaseException):
                 logger.error("InterviewPrep feilet", exc_info=interview_or_exc)
@@ -309,7 +308,9 @@ async def analyze(request: Request, input: JobInput):
                 yield event("FERDIG", "done")
                 return
 
-            # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang)
+            # Validator: faktasjekk Writer-output — regenerer writer ved funn (maks 1 gang).
+            # Writer-resultatet sendes aldri til klienten før valideringsløkken er ferdig,
+            # slik at brukeren kun ser det endelige utkastet.
             draft = writer_result
             for _attempt in range(2):
                 active.add("Validator")
@@ -321,6 +322,7 @@ async def analyze(request: Request, input: JobInput):
 
                 has_issues = "ingen avvik" not in validation.lower()
                 if not has_issues or _attempt == 1:
+                    yield event("Writer", "done", draft)
                     yield event("Validator", "done", validation)
                     break
 
@@ -334,7 +336,6 @@ async def analyze(request: Request, input: JobInput):
                     validation_issues=validation,
                 )
                 _log(session_id, "Writer", "done", (time.monotonic() - t0) * 1000)
-                yield event("Writer", "done", draft)
 
             _log(session_id, "session", "done", (time.monotonic() - session_start) * 1000)
             yield event("FERDIG", "done")
