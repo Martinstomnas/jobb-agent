@@ -26,15 +26,15 @@ Resultater streames til frontend fortløpende via SSE.
 
 ## Agenter
 
-| Agent         | Ansvar                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| JobPostingAnalyzer     | Eksplisitte krav + implisitte signaler fra annonsen                                        |
-| Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                                     |
-| Match         | Sterke matcher, gap og anbefalt posisjonering — vurderer fit-nivå og kan pause pipelinen ved svak match |
-| GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                                       |
-| Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste                    |
-| InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer                        |
-| Validator     | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon                   |
+| Agent              | Ansvar                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| JobPostingAnalyzer | Eksplisitte krav + implisitte signaler fra annonsen                                                     |
+| Research           | Selskapsinfo, kultur, tech-stack og nyheter via websøk                                                  |
+| Match              | Sterke matcher, gap og anbefalt posisjonering — vurderer fit-nivå og kan pause pipelinen ved svak match |
+| GapDetector        | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                                                    |
+| Writer             | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste                                 |
+| InterviewPrep      | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer                                     |
+| Validator          | Faktasjekker Writer-output — funn sendes tilbake til Writer for revisjon                                |
 
 ## Agentiske mønstre
 
@@ -54,15 +54,17 @@ GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak
 Output er delt i to faner:
 
 **Resultat**
-- **Anbefalt vinkling** — én setning om posisjonering fra Match-analysen
-- **Søknadsdisposisjon** — åpen som standard
-- **Intervjuforberedelse** — sammenleggbar
+
+- **Anbefalt vinkling**
+- **Søknadsdisposisjon**
+- **Intervjuforberedelse**
 
 **Analyse** — for kvalitetssikring og etterprøvbarhet
+
 - **Faktasjekk** — tydelig grønt/oransje statusbanner; funn vises som punkter. Fanen får et !-merke hvis det er avvik å sjekke.
 - **Kravanalyse** — eksplisitte krav, implisitte signaler og nøkkelord fra JobPostingAnalyzer
 - **Match-analyse** — sterke kort, gap og anbefalt vinkling fra Match
-- **Selskapsresearch** — strukturert selskapsinfo med inline kildelenker; alle brukte URL-er listet under teksten
+- **Selskapsresearch** — Alle brukte URL-er listet
 
 ## Oppsett
 
