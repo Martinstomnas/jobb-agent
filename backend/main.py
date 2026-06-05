@@ -227,28 +227,25 @@ async def analyze(request: Request, input: JobInput):
                 except asyncio.TimeoutError:
                     pass
 
-            # Gap-detektor: hopp over ved sterk match
-            extra_context = ""
-            if not fit["skip_gap_detector"]:
-                active.add("GapDetector")
-                yield event("GapDetector", "running")
-                t0 = time.monotonic()
-                questions = await gap_detector(research_text, input.cv, krav_result)
-                collected_answers = []
-                for question in questions:
-                    yield event("GapDetector", "question", question, session_id=session_id)
-                    try:
-                        answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
-                        yield event("GapDetector", "answered", answer)
-                        if answer.strip():
-                            collected_answers.append(answer)
-                    except asyncio.TimeoutError:
-                        yield event("GapDetector", "answered", "")
-                if not questions:
-                    yield event("GapDetector", "done", "Ingen gap å avklare")
-                _log(session_id, "GapDetector", "done", (time.monotonic() - t0) * 1000)
-                active.discard("GapDetector")
-                extra_context = "\n".join(collected_answers)
+            active.add("GapDetector")
+            yield event("GapDetector", "running")
+            t0 = time.monotonic()
+            questions = await gap_detector(research_text, input.cv, krav_result)
+            collected_answers = []
+            for question in questions:
+                yield event("GapDetector", "question", question, session_id=session_id)
+                try:
+                    answer = await asyncio.wait_for(answer_queue.get(), timeout=300)
+                    yield event("GapDetector", "answered", answer)
+                    if answer.strip():
+                        collected_answers.append(answer)
+                except asyncio.TimeoutError:
+                    yield event("GapDetector", "answered", "")
+            if not questions:
+                yield event("GapDetector", "done", "Ingen gap å avklare")
+            _log(session_id, "GapDetector", "done", (time.monotonic() - t0) * 1000)
+            active.discard("GapDetector")
+            extra_context = "\n".join(collected_answers)
 
             # Writer + InterviewPrep parallelt
             active.update({"Writer", "InterviewPrep"})

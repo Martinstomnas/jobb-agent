@@ -27,35 +27,27 @@ FIT_TOOL = {
             "fit_level": {
                 "type": "string",
                 "enum": ["strong", "medium", "weak"],
-                "description": (
-                    "'weak' = mangler flere sentrale krav (brukeren bør advares). "
-                    "'strong' = sterk match, GapDetector kan hoppes over."
-                ),
+                "description": "'weak' = mangler flere sentrale krav (brukeren bør advares).",
             },
             "fit_summary": {
                 "type": "string",
                 "description": "Én setning om matchkvaliteten — vises til brukeren ved svak match.",
             },
-            "skip_gap_detector": {
-                "type": "boolean",
-                "description": "True kun ved 'strong' match.",
-            },
         },
-        "required": ["fit_level", "fit_summary", "skip_gap_detector"],
+        "required": ["fit_level", "fit_summary"],
     },
 }
 
 DEFAULT_FIT = {
     "fit_level": "medium",
     "fit_summary": "",
-    "skip_gap_detector": False,
 }
 
 
 async def match(krav: str, research: str, cv: str) -> tuple[str, dict]:
     """
     Returnerer (analyse_tekst, fit_vurdering).
-    fit_vurdering inneholder fit_level, fit_summary og skip_gap_detector.
+    fit_vurdering inneholder fit_level og fit_summary.
     """
     prompt = f"""
 Du har fått disse tre inputene:
@@ -87,13 +79,5 @@ Kall set_fit etter at analysen er skrevet.
     if fit is None:
         logger.warning("Match returnerte ingen fit-vurdering — bruker standard.")
         fit = dict(DEFAULT_FIT)
-
-    # Håndhev invariant
-    if fit.get("skip_gap_detector") and fit.get("fit_level") != "strong":
-        logger.warning(
-            "Match satte skip_gap_detector=True med fit_level=%r — overstyrt til False.",
-            fit.get("fit_level"),
-        )
-        fit["skip_gap_detector"] = False
 
     return text, {**DEFAULT_FIT, **fit}

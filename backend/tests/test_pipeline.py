@@ -42,7 +42,7 @@ def _events(response_text: str) -> list[dict]:
 
 
 def test_happy_path_medium_match(monkeypatch):
-    fit = {"fit_level": "medium", "fit_summary": "Grei match.", "skip_gap_detector": False}
+    fit = {"fit_level": "medium", "fit_summary": "Grei match."}
     _patch_agents(monkeypatch, fit=fit)
 
     with TestClient(app) as client:
@@ -67,7 +67,7 @@ def test_happy_path_medium_match(monkeypatch):
 
 
 def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
-    fit = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    fit = {"fit_level": "medium", "fit_summary": ""}
     _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(main, "research", AsyncMock(side_effect=RuntimeError("API nede")))
 
@@ -83,7 +83,7 @@ def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
 
 
 def test_writer_feil_markerer_kun_writer_som_feilet(monkeypatch):
-    fit = {"fit_level": "strong", "fit_summary": "", "skip_gap_detector": True}
+    fit = {"fit_level": "strong", "fit_summary": ""}
     _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(main, "writer", AsyncMock(side_effect=RuntimeError("Timeout")))
 
@@ -99,7 +99,7 @@ def test_writer_feil_markerer_kun_writer_som_feilet(monkeypatch):
 
 
 def test_match_vinkling_ekstraheres_fra_riktig_seksjon(monkeypatch):
-    fit = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    fit = {"fit_level": "medium", "fit_summary": ""}
     _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main,
@@ -121,7 +121,7 @@ def test_match_vinkling_ekstraheres_fra_riktig_seksjon(monkeypatch):
 
 
 def test_validator_utloser_regenerering_ved_funn(monkeypatch):
-    fit = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    fit = {"fit_level": "medium", "fit_summary": ""}
     _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main,
@@ -142,19 +142,6 @@ def test_validator_utloser_regenerering_ved_funn(monkeypatch):
     assert writer_done_events[-1]["content"] == "UTKAST_V2"
     validator_done = next(e for e in events if e["agent"] == "Validator" and e["status"] == "done")
     assert "Ingen avvik" in validator_done["content"]
-
-
-def test_strong_match_hopper_over_gap_detector(monkeypatch):
-    fit = {"fit_level": "strong", "fit_summary": "Sterk match.", "skip_gap_detector": True}
-    _patch_agents(monkeypatch, fit=fit)
-
-    with TestClient(app) as client:
-        res = client.post("/analyze", json={"job_posting": "annonse", "cv": "cv"})
-        events = _events(res.text)
-
-    assert main.gap_detector.await_count == 0
-    assert not any(e["agent"] == "GapDetector" for e in events)
-    assert events[-1]["agent"] == "FERDIG"
 
 
 # --- Human-in-the-loop: blokkerende grener ---------------------------------
@@ -199,7 +186,7 @@ async def _stream_with_answers(payload: dict, answers: list[str]) -> list[dict]:
 
 
 async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
-    fit = {"fit_level": "medium", "fit_summary": "", "skip_gap_detector": False}
+    fit = {"fit_level": "medium", "fit_summary": ""}
     _patch_agents(monkeypatch, fit=fit)
     monkeypatch.setattr(
         main, "gap_detector", AsyncMock(return_value=["Erfaring med energi?"])
@@ -222,7 +209,7 @@ async def test_gap_svar_flyter_videre_til_writer(monkeypatch):
 
 
 async def test_weak_match_fortsett_kjorer_videre(monkeypatch):
-    fit = {"fit_level": "weak", "fit_summary": "Svak match.", "skip_gap_detector": False}
+    fit = {"fit_level": "weak", "fit_summary": "Svak match."}
     _patch_agents(monkeypatch, fit=fit)
 
     events = await asyncio.wait_for(
@@ -236,7 +223,7 @@ async def test_weak_match_fortsett_kjorer_videre(monkeypatch):
 
 
 async def test_weak_match_avbryt_stopper_pipelinen(monkeypatch):
-    fit = {"fit_level": "weak", "fit_summary": "Svak match.", "skip_gap_detector": False}
+    fit = {"fit_level": "weak", "fit_summary": "Svak match."}
     _patch_agents(monkeypatch, fit=fit)
 
     events = await asyncio.wait_for(

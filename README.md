@@ -15,7 +15,6 @@ FastAPI /analyze
     │     Research:   websøk etter selskapsinfo, kultur, tech-stack
     ├── Match          – kobler krav med kandidatens CV og vurderer fit:
     │     · "weak"   → advar bruker, vent på bekreftelse før videre
-    │     · "strong" → hopp over GapDetector
     ├── GapDetector    – stiller 0–3 oppfølgingsspørsmål (hoppes over ved sterk match)
     ├── Writer + InterviewPrep    (parallelt)
     │     Writer:        lager søknadsdisposisjon
@@ -31,7 +30,7 @@ Resultater streames til frontend fortløpende via SSE.
 | ------------- | ------------------------------------------------------------------------------------------ |
 | JobPostingAnalyzer     | Eksplisitte krav + implisitte signaler fra annonsen                                        |
 | Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                                     |
-| Match         | Sterke matcher, gap og anbefalt posisjonering — vurderer også fit-nivå for pipeline-styring |
+| Match         | Sterke matcher, gap og anbefalt posisjonering — vurderer fit-nivå og kan pause pipelinen ved svak match |
 | GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                                       |
 | Writer        | Søknadsdisposisjon: åpning, nøkkelpunkter, gap, avslutning, unngå-liste                    |
 | InterviewPrep | Sannsynlige spørsmål, svar-strategi og spørsmål å stille intervjuer                        |
@@ -43,7 +42,6 @@ Resultater streames til frontend fortløpende via SSE.
 Match-agenten produserer analyse og fit-vurdering i ett LLM-kall og justerer pipelinen deretter:
 
 - Svak match → pauser og ber brukeren bekrefte før analysen fortsetter
-- Sterk match → hopper over GapDetector
 
 **Faktaforankring (Validator)**
 Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV, research og svar fra GapDetector. Hvis påstander ikke kan spores til kildematerialet, regenererer Writer utkastet stille i bakgrunnen — brukeren ser aldri mellomversjonen. Validator kjøres én gang til på det reviderte utkastet, og disposisjonen vises først når løkken er ferdig. Maks én regenereringssyklus.
