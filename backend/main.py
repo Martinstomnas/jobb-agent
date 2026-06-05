@@ -308,6 +308,7 @@ async def analyze(request: Request, input: JobInput):
                     break
 
                 yield event("Validator", "issues", validation)
+                active.add("Writer")
                 t0 = time.monotonic()
                 draft = await writer(
                     krav_result,
@@ -316,6 +317,7 @@ async def analyze(request: Request, input: JobInput):
                     extra_context=extra_context,
                     validation_issues=validation,
                 )
+                active.discard("Writer")
                 _log(session_id, "Writer", "done", (time.monotonic() - t0) * 1000)
 
             _log(session_id, "session", "done", (time.monotonic() - session_start) * 1000)
