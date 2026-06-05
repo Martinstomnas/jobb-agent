@@ -85,7 +85,7 @@ Frontend kjører på `http://localhost:5173`, backend på `http://localhost:8000
 
 ## Testing
 
-**Backend** — 45 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
+**Backend** — 50 tester. LLM-kall mockes, suiten kjører på under ett sekund uten API-kost.
 
 ```bash
 cd backend
