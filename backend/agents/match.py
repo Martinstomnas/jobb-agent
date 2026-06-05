@@ -37,6 +37,6 @@ Gjør en ærlig match-analyse:
 - (hva mangler, og hvordan kan kandidaten adressere det i søknaden)
 
 ## Anbefalt vinkling
-- (én setning om hvordan kandidaten bør posisjonere seg)
+Én setning — ikke punktliste, ikke tabell. Eksempel: "Posisjoner deg som en X med erfaring fra Y."
 """
     return await llm(SYSTEM, prompt, max_tokens=2000)
