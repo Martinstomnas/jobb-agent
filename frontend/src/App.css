@@ -567,29 +567,34 @@ body {
 }
 
 .output-content h2 {
-  font-size: 10px;
-  font-family: var(--mono);
-  font-weight: 500;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 28px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 28px 0 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 
 .output-content h2:first-child {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .output-content h3 {
-  font-size: 14px;
+  font-size: 11px;
+  font-family: var(--mono);
   font-weight: 500;
-  color: var(--text);
-  margin: 14px 0 4px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 16px 0 4px;
 }
 
 .output-content p {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: var(--text);
+  line-height: 1.65;
 }
 
 .output-content ul {
@@ -597,13 +602,14 @@ body {
   margin: 6px 0 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .output-content li {
   padding-left: 14px;
   position: relative;
   color: var(--text);
+  line-height: 1.55;
 }
 
 .output-content li::before {
@@ -830,6 +836,7 @@ body {
 .interview-content {
   font-size: 13px;
   text-align: left;
+  line-height: 1.65;
 }
 
 .interview-content h1 {
@@ -842,19 +849,22 @@ body {
   margin: 0 0 8px;
 }
 
-.interview-content p { color: var(--text); margin-bottom: 8px; }
+.interview-content p { color: var(--text); margin-bottom: 10px; line-height: 1.65; }
 
 .interview-content h2 {
-  font-size: 14px;
-  font-family: var(--mono);
-  font-weight: 500;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 20px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 24px 0 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 
-.interview-content h2:first-child { margin-top: 0; }
+.interview-content h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
 
 .interview-content h3 {
   font-size: 11px;
@@ -862,25 +872,28 @@ body {
   font-weight: 500;
   color: var(--text2);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 20px 0 8px;
+  letter-spacing: 0.07em;
+  margin: 16px 0 4px;
 }
+
+.interview-content h3:first-child { margin-top: 0; }
 
 .interview-content strong { color: var(--text); font-weight: 600; display: inline; }
 
 .interview-content ul {
   list-style: none;
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .interview-content li {
   padding-left: 14px;
   position: relative;
   color: var(--text);
+  line-height: 1.55;
 }
 
 .interview-content li::before {
