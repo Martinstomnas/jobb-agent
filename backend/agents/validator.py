@@ -14,7 +14,12 @@ Svar på norsk.
 """
 
 
-async def validator(draft: str, cv: str, krav: str, research: str) -> str:
+async def validator(draft: str, cv: str, krav: str, research: str, extra_context: str = "") -> str:
+    extra_section = (
+        f"\nTilleggsinformasjon kandidaten har oppgitt (regnes som gyldig kilde):\n{extra_context}\n"
+        if extra_context
+        else ""
+    )
     prompt = f"""
 Her er en søknadsdisposisjon:
 
@@ -32,7 +37,7 @@ Krav fra stillingen:
 
 Research om arbeidsgiver:
 {research}
-
+{extra_section}
 ---
 
 Gå gjennom disposisjonen og identifiser påstander som IKKE kan verifiseres i kildematerialet.

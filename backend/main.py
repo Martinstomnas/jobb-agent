@@ -315,7 +315,7 @@ async def analyze(request: Request, input: JobInput):
                 active.add("Validator")
                 yield event("Validator", "running")
                 t0 = time.monotonic()
-                validation = await validator(draft, input.cv, krav_result, research_text)
+                validation = await validator(draft, input.cv, krav_result, research_text, extra_context)
                 _log(session_id, "Validator", "done", (time.monotonic() - t0) * 1000)
                 active.discard("Validator")
 
@@ -325,8 +325,6 @@ async def analyze(request: Request, input: JobInput):
                     break
 
                 yield event("Validator", "issues", validation)
-                active.add("Writer")
-                yield event("Writer", "running")
                 t0 = time.monotonic()
                 draft = await writer(
                     krav_result,
@@ -336,7 +334,6 @@ async def analyze(request: Request, input: JobInput):
                     validation_issues=validation,
                 )
                 _log(session_id, "Writer", "done", (time.monotonic() - t0) * 1000)
-                active.discard("Writer")
                 yield event("Writer", "done", draft)
 
             _log(session_id, "session", "done", (time.monotonic() - session_start) * 1000)

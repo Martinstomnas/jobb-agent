@@ -48,19 +48,27 @@ Etter Match vurderer Orchestratoren kandidatens fit og justerer pipelinen:
 - Sterk match → hopper over GapDetector
 
 **Faktaforankring (Validator)**
-Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV og research. Hvis påstander ikke kan spores til kildematerialet, sendes funnene tilbake til Writer som regenererer utkastet. Validator kjøres én gang til på det reviderte utkastet. Maks én regenereringssyklus.
+Writer og InterviewPrep kjøres parallelt. Deretter faktasjekker Validator Writer-utkastet mot CV, research og svar fra GapDetector. Hvis påstander ikke kan spores til kildematerialet, regenererer Writer utkastet stille i bakgrunnen. Validator kjøres én gang til på det reviderte utkastet. Maks én regenereringssyklus.
 
 **Human-in-the-loop (GapDetector + FitWarning)**
 GapDetector stiller målrettede oppfølgingsspørsmål der CV har hull. Ved svak match vises en advarsel med valget om å fortsette eller avbryte.
 
 ## Output
 
-Over disposisjonen vises **Anbefalt vinkling** — én setning om hvordan kandidaten bør posisjonere seg.
+Output er delt i to faner:
 
-Under disposisjonen er to sammenleggbare seksjoner:
+**Resultat**
+- **Anbefalt vinkling** — én setning om posisjonering fra Match-analysen
+- **Søknadsdisposisjon** — åpen som standard
+- **Intervjuforberedelse** — sammenleggbar
 
-- **Intervjuforberedelse** — spørsmål og svar-strategi
+**Analyse** — for kvalitetssikring og etterprøvbarhet
+- **Faktasjekk** — tydelig grønt/oransje statusbanner; funn vises som punkter. Fanen får et !-merke hvis det er avvik å sjekke.
+- **Kravanalyse** — eksplisitte krav, implisitte signaler og nøkkelord fra Kravleser
+- **Match-analyse** — sterke kort, gap og anbefalt vinkling fra Match
+- **Selskapsresearch** — strukturert selskapinfo fra Research
 - **Søkelogg** — websøk Research-agenten utførte
+- **Pipeline** — Orchestratorens fit-nivå og pipeline-beslutninger
 
 ## Oppsett
 

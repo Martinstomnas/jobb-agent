@@ -140,8 +140,6 @@ def test_validator_utloser_regenerering_ved_funn(monkeypatch):
 
     statuses = [(e["agent"], e["status"]) for e in events]
     assert ("Validator", "issues") in statuses
-    assert ("Writer", "running") in statuses[statuses.index(("Validator", "issues")):], \
-        "Writer skal restartes etter validator-funn"
     assert main.writer.await_count == 2
     assert main.validator.await_count == 2
     writer_done_events = [e for e in events if e["agent"] == "Writer" and e["status"] == "done"]
