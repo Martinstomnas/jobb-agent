@@ -1,6 +1,6 @@
 """
-Agent: Kravleser
-Leser stillingsannonsen og trekker ut eksplisitte krav og implisitte signaler.
+Agent: JobPostingAnalyzer
+Reads the job posting and extracts explicit requirements and implicit signals.
 """
 
 from utils.llm import llm
@@ -16,7 +16,7 @@ Svar på norsk.
 """
 
 
-async def kravleser(job_posting: str) -> str:
+async def job_posting_analyzer(job_posting: str) -> str:
     prompt = f"""
 Analyser denne stillingsannonsen:
 

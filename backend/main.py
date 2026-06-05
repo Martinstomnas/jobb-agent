@@ -19,7 +19,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
 
-from agents.kravleser import kravleser
+from agents.job_posting_analyzer import job_posting_analyzer
 from agents.research import research
 from agents.match import match
 from agents.gap_detector import gap_detector
@@ -171,25 +171,25 @@ async def analyze(request: Request, input: JobInput):
         _log(session_id, "session", "start")
 
         try:
-            # Kravleser + Research parallelt
-            active.update({"Kravleser", "Research"})
-            yield event("Kravleser", "running")
+            # JobPostingAnalyzer + Research parallelt
+            active.update({"JobPostingAnalyzer", "Research"})
+            yield event("JobPostingAnalyzer", "running")
             yield event("Research", "running")
 
             (krav_or_exc, krav_ms), (research_or_exc, research_ms) = await asyncio.gather(
-                _timed(kravleser(input.job_posting)),
+                _timed(job_posting_analyzer(input.job_posting)),
                 _timed(research(input.job_posting)),
             )
-            active.difference_update({"Kravleser", "Research"})
+            active.difference_update({"JobPostingAnalyzer", "Research"})
 
             if isinstance(krav_or_exc, BaseException):
-                logger.error("Kravleser feilet", exc_info=krav_or_exc)
-                _log(session_id, "Kravleser", "error", krav_ms)
-                yield event("Kravleser", "error", "En uventet feil oppstod. Prøv igjen.")
+                logger.error("JobPostingAnalyzer feilet", exc_info=krav_or_exc)
+                _log(session_id, "JobPostingAnalyzer", "error", krav_ms)
+                yield event("JobPostingAnalyzer", "error", "En uventet feil oppstod. Prøv igjen.")
             else:
                 krav_result = krav_or_exc
-                _log(session_id, "Kravleser", "done", krav_ms)
-                yield event("Kravleser", "done", krav_result)
+                _log(session_id, "JobPostingAnalyzer", "done", krav_ms)
+                yield event("JobPostingAnalyzer", "done", krav_result)
 
             if isinstance(research_or_exc, BaseException):
                 logger.error("Research feilet", exc_info=research_or_exc)

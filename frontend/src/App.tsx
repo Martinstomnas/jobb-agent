@@ -10,7 +10,7 @@ import type { AgentStates, ResearchSource } from "./types";
 import { API_URL } from "./config";
 
 const AGENTS = [
-  "Kravleser",
+  "JobPostingAnalyzer",
   "Research",
   "Match",
   "GapDetector",
@@ -96,7 +96,7 @@ export default function App() {
       if (msg.agent === "Match" && msg.status === "done") setVinklingOutput(msg.content);
       if (msg.agent === "Writer" && msg.status === "done") setOutput(msg.content);
       if (msg.agent === "InterviewPrep" && msg.status === "done") setInterviewPrep(msg.content);
-      if (msg.agent === "Kravleser" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Kravleser: msg.content }));
+      if (msg.agent === "JobPostingAnalyzer" && msg.status === "done") setAgentLog((prev) => ({ ...prev, JobPostingAnalyzer: msg.content }));
       if (msg.agent === "Research" && msg.status === "done") setAgentLog((prev) => ({ ...prev, Research: msg.content }));
       if (msg.agent === "Match" && msg.status === "done" && msg.full_match) setAgentLog((prev) => ({ ...prev, Match: msg.full_match }));
       if (msg.agent === "Validator" && msg.status === "done") setValidation(msg.content);

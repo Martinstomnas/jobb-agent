@@ -16,7 +16,7 @@ from main import app
 
 def _patch_agents(monkeypatch, *, fit: dict):
     """Mocker alle agentene main kaller med en gitt fit-vurdering fra Match."""
-    monkeypatch.setattr(main, "kravleser", AsyncMock(return_value="KRAV"))
+    monkeypatch.setattr(main, "job_posting_analyzer", AsyncMock(return_value="KRAV"))
     monkeypatch.setattr(
         main, "research", AsyncMock(return_value=("RESEARCH", [{"query": "q", "results": []}]))
     )
@@ -51,7 +51,7 @@ def test_happy_path_medium_match(monkeypatch):
         events = _events(res.text)
 
     agents_seen = {(e["agent"], e["status"]) for e in events}
-    assert ("Kravleser", "done") in agents_seen
+    assert ("JobPostingAnalyzer", "done") in agents_seen
     assert ("Research", "done") in agents_seen
     assert ("Match", "done") in agents_seen
     assert ("Writer", "done") in agents_seen
@@ -77,8 +77,8 @@ def test_research_feil_markerer_kun_research_som_feilet(monkeypatch):
 
     agents_seen = {(e["agent"], e["status"]) for e in events}
     assert ("Research", "error") in agents_seen
-    assert ("Kravleser", "error") not in agents_seen
-    assert ("Kravleser", "done") in agents_seen
+    assert ("JobPostingAnalyzer", "error") not in agents_seen
+    assert ("JobPostingAnalyzer", "done") in agents_seen
     assert events[-1]["agent"] == "FERDIG"
 
 

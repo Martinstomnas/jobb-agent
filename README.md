@@ -10,8 +10,8 @@ React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE).
 Input: Stillingsannonse + CV (tekst eller PDF)
     ↓
 FastAPI /analyze
-    ├── Kravleser + Research      (parallelt)
-    │     Kravleser:  trekker ut krav og implisitte signaler
+    ├── JobPostingAnalyzer + Research      (parallelt)
+    │     JobPostingAnalyzer:  trekker ut krav og implisitte signaler
     │     Research:   websøk etter selskapsinfo, kultur, tech-stack
     ├── Match          – kobler krav med kandidatens CV og vurderer fit:
     │     · "weak"   → advar bruker, vent på bekreftelse før videre
@@ -29,7 +29,7 @@ Resultater streames til frontend fortløpende via SSE.
 
 | Agent         | Ansvar                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------ |
-| Kravleser     | Eksplisitte krav + implisitte signaler fra annonsen                                        |
+| JobPostingAnalyzer     | Eksplisitte krav + implisitte signaler fra annonsen                                        |
 | Research      | Selskapsinfo, kultur, tech-stack og nyheter via websøk                                     |
 | Match         | Sterke matcher, gap og anbefalt posisjonering — vurderer også fit-nivå for pipeline-styring |
 | GapDetector   | Stiller inntil 3 oppfølgingsspørsmål der CV har hull                                       |
@@ -62,7 +62,7 @@ Output er delt i to faner:
 
 **Analyse** — for kvalitetssikring og etterprøvbarhet
 - **Faktasjekk** — tydelig grønt/oransje statusbanner; funn vises som punkter. Fanen får et !-merke hvis det er avvik å sjekke.
-- **Kravanalyse** — eksplisitte krav, implisitte signaler og nøkkelord fra Kravleser
+- **Kravanalyse** — eksplisitte krav, implisitte signaler og nøkkelord fra JobPostingAnalyzer
 - **Match-analyse** — sterke kort, gap og anbefalt vinkling fra Match
 - **Selskapsresearch** — strukturert selskapsinfo med inline kildelenker; alle brukte URL-er listet under teksten
 
@@ -97,7 +97,7 @@ pytest
 ```
 
 - **Unit:** GapDetector-parsing, Orchestrator-fallback, input-validatorer
-- **Agent:** alle agenter (Kravleser, Writer, InterviewPrep, Validator, Research) — prompt-innhold, parametere og returverdier
+- **Agent:** alle agenter (JobPostingAnalyzer, Writer, InterviewPrep, Validator, Research) — prompt-innhold, parametere og returverdier
 - **Endepunkt:** PDF-opplasting (filtype, størrelse, korrupt fil)
 - **Integrasjon:** hele `/analyze`-flyten — event-sekvens, adaptiv pipeline,
   guardrails, og de blokkerende human-in-the-loop-grenene (svar via `/answer`)

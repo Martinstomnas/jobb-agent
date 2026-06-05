@@ -176,9 +176,9 @@ export default function Output({ content, running, vinklingOutput, sources, inte
               <ValidationStatus validation={validation} />
             </Collapsible>
           )}
-          {agentLog.Kravleser && (
+          {agentLog.JobPostingAnalyzer && (
             <Collapsible label="Kravanalyse">
-              <ReactMarkdown>{agentLog.Kravleser}</ReactMarkdown>
+              <ReactMarkdown>{agentLog.JobPostingAnalyzer}</ReactMarkdown>
             </Collapsible>
           )}
           {agentLog.Match && (
