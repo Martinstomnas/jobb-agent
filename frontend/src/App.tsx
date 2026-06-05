@@ -70,7 +70,12 @@ export default function App() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processEvent = (msg: Record<string, any>) => {
-      if (msg.agent === "FERDIG") { setRunning(false); return; }
+      if (msg.agent === "FERDIG") {
+        setRunning(false);
+        setFitWarning(null);
+        setPendingQuestion(null);
+        return;
+      }
 
       if (msg.agent === "Match" && msg.status === "warning") {
         setFitWarning({ summary: msg.content, sessionId: msg.session_id, key: Date.now() });
