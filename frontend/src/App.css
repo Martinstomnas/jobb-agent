@@ -1023,6 +1023,109 @@ body {
   color: var(--text2);
 }
 
+/* ─── OUTPUT TABS ─── */
+.output-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+}
+
+.output-tab {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 0 12px;
+  margin-right: 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+  position: relative;
+  bottom: -1px;
+}
+
+.output-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+.output-tab:not(.active):hover {
+  color: var(--text);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--mono);
+  line-height: 1;
+}
+
+.tab-badge--warning {
+  background: rgba(196, 122, 0, 0.15);
+  color: var(--running);
+}
+
+.tab-badge--ok {
+  background: rgba(26, 122, 64, 0.12);
+  color: var(--done);
+}
+
+/* ─── FAKTASJEKK STATUS ─── */
+.faktasjekk-status {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.faktasjekk-ok {
+  background: rgba(26, 122, 64, 0.06);
+  border: 1px solid rgba(26, 122, 64, 0.2);
+}
+
+.faktasjekk-issues {
+  background: rgba(196, 122, 0, 0.06);
+  border: 1px solid rgba(196, 122, 0, 0.25);
+}
+
+.faktasjekk-indicator {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.faktasjekk-ok .faktasjekk-indicator { color: var(--done); }
+.faktasjekk-issues .faktasjekk-indicator { color: var(--running); }
+
+.faktasjekk-body { flex: 1; min-width: 0; }
+
+.faktasjekk-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.faktasjekk-detail {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 800px) {
   .app-main { grid-template-columns: 1fr; }

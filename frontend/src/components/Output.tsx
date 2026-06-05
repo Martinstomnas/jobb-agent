@@ -2,6 +2,8 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { ResearchSource } from "../types";
 
+type OutputTab = "resultat" | "analyse";
+
 interface CollapsibleProps {
   label: string;
   count?: string | null;
@@ -59,13 +61,24 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-const LOG_ORDER = ["Kravleser", "Research", "Match", "Orchestrator"] as const;
-const LOG_LABELS: Record<string, string> = {
-  Kravleser: "Kravleser — ekstraherte krav",
-  Research: "Research — selskapsinfo",
-  Match: "Match — full analyse",
-  Orchestrator: "Orchestrator — pipeline-plan",
-};
+function ValidationStatus({ validation }: { validation: string }) {
+  const isOk = validation.toLowerCase().includes("ingen avvik");
+  return (
+    <div className={`faktasjekk-status ${isOk ? "faktasjekk-ok" : "faktasjekk-issues"}`}>
+      <span className="faktasjekk-indicator">{isOk ? "✓" : "!"}</span>
+      <div className="faktasjekk-body">
+        <div className="faktasjekk-title">
+          {isOk ? "Ingen avvik funnet" : "Mulige avvik – sjekk før du sender"}
+        </div>
+        {!isOk && (
+          <div className="faktasjekk-detail">
+            <ReactMarkdown>{validation}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface OutputProps {
   content: string | null;
@@ -78,6 +91,8 @@ interface OutputProps {
 }
 
 export default function Output({ content, running, vinklingOutput, sources, interviewPrep, validation, agentLog }: OutputProps) {
+  const [activeTab, setActiveTab] = useState<OutputTab>("resultat");
+
   if (!content && !running) {
     return (
       <div className="output output-empty">
@@ -99,63 +114,106 @@ export default function Output({ content, running, vinklingOutput, sources, inte
     );
   }
 
+  const hasValidationIssues = validation ? !validation.toLowerCase().includes("ingen avvik") : false;
+  const hasAnalyseContent =
+    Object.keys(agentLog).length > 0 ||
+    validation !== null ||
+    (sources !== null && sources.length > 0);
+
   return (
     <div className="output">
-      {vinklingOutput && (
-        <div className="vinkling-callout">
-          <span className="vinkling-label">Anbefalt vinkling</span>
-          <p>{vinklingOutput}</p>
-        </div>
-      )}
-
-      <Collapsible label="Søknadsdisposisjon" defaultOpen>
-        <ReactMarkdown>{content!}</ReactMarkdown>
-        <CopyButton text={content!} />
-      </Collapsible>
-
-      {interviewPrep && (
-        <Collapsible label="Intervjuforberedelse">
-          <ReactMarkdown>{interviewPrep}</ReactMarkdown>
-          <CopyButton text={interviewPrep} />
-        </Collapsible>
-      )}
-
-      {validation && (
-        <Collapsible
-          label="Faktasjekk"
-          count={validation.includes("Ingen avvik funnet") ? "ok" : "funn"}
+      <div className="output-tabs">
+        <button
+          className={`output-tab ${activeTab === "resultat" ? "active" : ""}`}
+          onClick={() => setActiveTab("resultat")}
         >
-          <ReactMarkdown>{validation}</ReactMarkdown>
-        </Collapsible>
+          Resultat
+        </button>
+        {hasAnalyseContent && (
+          <button
+            className={`output-tab ${activeTab === "analyse" ? "active" : ""}`}
+            onClick={() => setActiveTab("analyse")}
+          >
+            Analyse
+            {validation !== null && (
+              <span className={`tab-badge ${hasValidationIssues ? "tab-badge--warning" : "tab-badge--ok"}`}>
+                {hasValidationIssues ? "!" : "✓"}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {activeTab === "resultat" && (
+        <>
+          {vinklingOutput && (
+            <div className="vinkling-callout">
+              <span className="vinkling-label">Anbefalt vinkling</span>
+              <p>{vinklingOutput}</p>
+            </div>
+          )}
+          <Collapsible label="Søknadsdisposisjon" defaultOpen>
+            <ReactMarkdown>{content!}</ReactMarkdown>
+            <CopyButton text={content!} />
+          </Collapsible>
+          {interviewPrep && (
+            <Collapsible label="Intervjuforberedelse">
+              <ReactMarkdown>{interviewPrep}</ReactMarkdown>
+              <CopyButton text={interviewPrep} />
+            </Collapsible>
+          )}
+        </>
       )}
 
-      {sources && sources.length > 0 && (
-        <Collapsible label="Søkelogg" count={`${sources.length} søk`}>
-          {sources.map((s, i) => (
-            <div key={i} className="source-group">
-              <div className="source-query">"{s.query}"</div>
-              <ul className="source-urls">
-                {s.results.map((r, j) => (
-                  <li key={j}>
-                    <span className="source-title">{r.title}</span>
-                    <span className="source-url">{r.url}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </Collapsible>
-      )}
-
-      {LOG_ORDER.some(a => agentLog[a]) && (
-        <Collapsible label="Agentlogg" count={`${LOG_ORDER.filter(a => agentLog[a]).length} agenter`}>
-          {LOG_ORDER.filter(a => agentLog[a]).map(agent => (
-            <div key={agent} className="log-entry">
-              <div className="log-agent-label">{LOG_LABELS[agent]}</div>
-              <ReactMarkdown>{agentLog[agent]}</ReactMarkdown>
-            </div>
-          ))}
-        </Collapsible>
+      {activeTab === "analyse" && (
+        <>
+          {validation && (
+            <Collapsible
+              label="Faktasjekk"
+              count={hasValidationIssues ? "sjekk" : "ok"}
+              defaultOpen
+            >
+              <ValidationStatus validation={validation} />
+            </Collapsible>
+          )}
+          {agentLog.Kravleser && (
+            <Collapsible label="Kravanalyse">
+              <ReactMarkdown>{agentLog.Kravleser}</ReactMarkdown>
+            </Collapsible>
+          )}
+          {agentLog.Match && (
+            <Collapsible label="Match-analyse">
+              <ReactMarkdown>{agentLog.Match}</ReactMarkdown>
+            </Collapsible>
+          )}
+          {agentLog.Research && (
+            <Collapsible label="Selskapsresearch">
+              <ReactMarkdown>{agentLog.Research}</ReactMarkdown>
+            </Collapsible>
+          )}
+          {sources && sources.length > 0 && (
+            <Collapsible label="Søkelogg" count={`${sources.length} søk`}>
+              {sources.map((s, i) => (
+                <div key={i} className="source-group">
+                  <div className="source-query">"{s.query}"</div>
+                  <ul className="source-urls">
+                    {s.results.map((r, j) => (
+                      <li key={j}>
+                        <span className="source-title">{r.title}</span>
+                        <span className="source-url">{r.url}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </Collapsible>
+          )}
+          {agentLog.Orchestrator && (
+            <Collapsible label="Pipeline">
+              <ReactMarkdown>{agentLog.Orchestrator}</ReactMarkdown>
+            </Collapsible>
+          )}
+        </>
       )}
     </div>
   );
