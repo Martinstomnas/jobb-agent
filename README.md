@@ -2,7 +2,7 @@
 
 Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon. Pipelinen er dynamisk — Match-agenten vurderer kandidatens fit og bestemmer hvilke steg som er nødvendige.
 
-<img width="1350" height="753" alt="jobb-agent" src="https://github.com/user-attachments/assets/223a5597-c987-4805-bc3b-5e9be511bd09" />
+<img width="1350" height="693" alt="jobb-agent" src="https://github.com/user-attachments/assets/9d14a157-dd03-4082-a333-f1875fb36f8b" />
 
 ## Arkitektur
 
