@@ -2,6 +2,8 @@
 
 Multi-agent system som analyserer en stillingsannonse og CV, og produserer en strukturert søknadsdisposisjon. Pipelinen er dynamisk — Match-agenten vurderer kandidatens fit og bestemmer hvilke steg som er nødvendige.
 
+<img width="1350" height="753" alt="jobb-agent" src="https://github.com/user-attachments/assets/223a5597-c987-4805-bc3b-5e9be511bd09" />
+
 ## Arkitektur
 
 React-frontend kommuniserer med en FastAPI-backend via Server-Sent Events (SSE). Spesialiserte Claude-agenter kjører i sekvens og delvis parallelt. Match-agenten gjør pipelinen adaptiv basert på matchkvalitet.
